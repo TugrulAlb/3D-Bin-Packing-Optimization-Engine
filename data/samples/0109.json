@@ -1,0 +1,407 @@
+{
+  "id": 10000109,
+  "container": {
+    "length": 120,
+    "width": 100,
+    "height": 180,
+    "weight": 1250
+  },
+  "details": [
+    {
+      "product": {
+        "id": 25312,
+        "code": "15100285",
+        "package_length": 40,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 200.000
+      },
+      "package_quantity": 1,
+      "package_id": "T4-1"
+    },
+    {
+      "product": {
+        "id": 25312,
+        "code": "15100285",
+        "package_length": 40,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 200.000
+      },
+      "package_quantity": 1,
+      "package_id": "T4-2"
+    },
+    {
+      "product": {
+        "id": 25312,
+        "code": "15100285",
+        "package_length": 40,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 200.000
+      },
+      "package_quantity": 1,
+      "package_id": "T4-3"
+    },
+    {
+      "product": {
+        "id": 25312,
+        "code": "15100285",
+        "package_length": 40,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 200.000
+      },
+      "package_quantity": 1,
+      "package_id": "T4-4"
+    },
+    {
+      "product": {
+        "id": 25312,
+        "code": "15100285",
+        "package_length": 40,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 200.000
+      },
+      "package_quantity": 1,
+      "package_id": "T4-5"
+    },
+    {
+      "product": {
+        "id": 25312,
+        "code": "15100285",
+        "package_length": 40,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 200.000
+      },
+      "package_quantity": 1,
+      "package_id": "T4-6"
+    },
+    {
+      "product": {
+        "id": 25312,
+        "code": "15100285",
+        "package_length": 40,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 200.000
+      },
+      "package_quantity": 1,
+      "package_id": "T4-7"
+    },
+    {
+      "product": {
+        "id": 25312,
+        "code": "15100285",
+        "package_length": 40,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 200.000
+      },
+      "package_quantity": 1,
+      "package_id": "T4-8"
+    },
+    {
+      "product": {
+        "id": 25319,
+        "code": "20079129",
+        "package_length": 45,
+        "package_width": 50,
+        "package_height": 55,
+        "package_weight": 180.000
+      },
+      "package_quantity": 1,
+      "package_id": "T5-1"
+    },
+    {
+      "product": {
+        "id": 25319,
+        "code": "20079129",
+        "package_length": 45,
+        "package_width": 50,
+        "package_height": 55,
+        "package_weight": 180.000
+      },
+      "package_quantity": 1,
+      "package_id": "T5-2"
+    },
+    {
+      "product": {
+        "id": 25319,
+        "code": "20079129",
+        "package_length": 45,
+        "package_width": 50,
+        "package_height": 55,
+        "package_weight": 180.000
+      },
+      "package_quantity": 1,
+      "package_id": "T5-3"
+    },
+    {
+      "product": {
+        "id": 25319,
+        "code": "20079129",
+        "package_length": 45,
+        "package_width": 50,
+        "package_height": 55,
+        "package_weight": 180.000
+      },
+      "package_quantity": 1,
+      "package_id": "T5-4"
+    },
+    {
+      "product": {
+        "id": 25319,
+        "code": "20079129",
+        "package_length": 45,
+        "package_width": 50,
+        "package_height": 55,
+        "package_weight": 180.000
+      },
+      "package_quantity": 1,
+      "package_id": "T5-5"
+    },
+    {
+      "product": {
+        "id": 25319,
+        "code": "20079129",
+        "package_length": 45,
+        "package_width": 50,
+        "package_height": 55,
+        "package_weight": 180.000
+      },
+      "package_quantity": 1,
+      "package_id": "T5-6"
+    },
+    {
+      "product": {
+        "id": 25319,
+        "code": "20079129",
+        "package_length": 45,
+        "package_width": 50,
+        "package_height": 55,
+        "package_weight": 180.000
+      },
+      "package_quantity": 1,
+      "package_id": "T5-7"
+    },
+    {
+      "product": {
+        "id": 25325,
+        "code": "67054507",
+        "package_length": 50,
+        "package_width": 40,
+        "package_height": 65,
+        "package_weight": 150.000
+      },
+      "package_quantity": 1,
+      "package_id": "T6-1"
+    },
+    {
+      "product": {
+        "id": 25325,
+        "code": "67054507",
+        "package_length": 50,
+        "package_width": 40,
+        "package_height": 65,
+        "package_weight": 150.000
+      },
+      "package_quantity": 1,
+      "package_id": "T6-2"
+    },
+    {
+      "product": {
+        "id": 25330,
+        "code": "88888888",
+        "package_length": 35,
+        "package_width": 40,
+        "package_height": 50,
+        "package_weight": 120.000
+      },
+      "package_quantity": 1,
+      "package_id": "T7-1"
+    },
+    {
+      "product": {
+        "id": 25330,
+        "code": "88888888",
+        "package_length": 35,
+        "package_width": 40,
+        "package_height": 50,
+        "package_weight": 120.000
+      },
+      "package_quantity": 1,
+      "package_id": "T7-2"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-1-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-2-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-3-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-4-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-5-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-6-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-7-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-8-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-9-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-10-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-11-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-12-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-13-MODIFIED"
+    },
+    {
+      "product": {
+        "id": 25335,
+        "code": "99999999",
+        "package_length": 60,
+        "package_width": 50,
+        "package_height": 60,
+        "package_weight": 130.000
+      },
+      "package_quantity": 1,
+      "package_id": "T8-14-MODIFIED"
+    }
+  ]
+}
