@@ -31,6 +31,30 @@ Core objectives of the project:
 - 💾 Historical tracking of optimized operations
 - 🔄 JSON data import/export
 
+## 📦 Realistic Packing (Amazon-like)
+
+Gerçek depo istifine benzer kompakt, katmanlı ve stabil yerleşimler için
+dört ek mekanizma etkinleştirilmiştir:
+
+| Mekanizma | Dosya | Ne yapar? |
+|---|---|---|
+| **Void Penalty** | `src/core/fitness.py` | Bounding-box hacmi ile gerçek kutu hacmi farkını ölçer; büyük iç boşluklar (U şekli, oyuklar) ceza alır. |
+| **Layer Snapping** | `src/core/packing.py` | Kutu z koordinatı, mevcut katman yüzeylerine (layer_map) veya Z_GRID=5 cm ızgarasına yuvarlanır. Raf gibi temiz katman görünümü sağlar. |
+| **Edge Bias** | `src/core/fitness.py` | Ürünler duvarlara ne kadar yakınsa o kadar ödüllendirilir; kenar boşlukları azalır. |
+| **Cavity Penalty** | `src/core/fitness.py` | XY ayak izindeki kapalı iç boşluklar (baca kolonları) flood-fill ile tespit edilir ve cezalandırılır. N=4 throttle ile performans korunur. |
+
+### Parametreler (`src/core/fitness.py` başı)
+
+```python
+W_VOID        = 0.8    # Void ceza ağırlığı        [0.6 – 1.2]
+W_EDGE        = 0.15   # Kenar ödül ağırlığı       [0.1 – 0.3]
+W_CAVITY      = 0.35   # Cavity ceza ağırlığı      [0.2 – 0.6]
+CAVITY_GRID   = 5.0    # Cavity grid adımı (cm)
+CAVITY_THROTTLE = 4    # Her N bireyde cavity hesapla
+```
+
+`Z_GRID` (katman snap adımı cm) için `src/core/packing.py` dosyasının başına bakın.
+
 ## 🏗️ Project Structure
 
 ```
@@ -78,8 +102,9 @@ Core objectives of the project:
 ## 🚀 Installation & Running
 
 ### Requirements
-- Python 3.11 or higher
+- Python 3.11+ (tested on Python 3.12.2)
 - pip (Python package manager)
+- Git
 
 ### 1. Clone the Repository
 
@@ -106,40 +131,111 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Django Setup
+### 4. Environment Configuration
+
+Create a `.env` file (copy from `.env.example`):
 
 ```bash
-# Apply database migrations
+cp .env.example .env
+```
+
+**Generate a secure SECRET_KEY:**
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+Edit `.env` and set:
+- `SECRET_KEY`: Your generated secret key
+- `DEBUG`: `True` for development, `False` for production
+- `ALLOWED_HOSTS`: Comma-separated list (e.g., `localhost,127.0.0.1`)
+- `DEBUG_SUPPORT`: Set to `1` to enable detailed optimization logging
+
+### 5. Database Setup
+
+```bash
 python manage.py migrate
+```
 
-# Create superuser (optional)
-python manage.py createsuperuser
+### 6. Run Development Server
 
-# Start development server
+```bash
 python manage.py runserver
 ```
 
-Access the web interface at: [http://localhost:8000](http://localhost:8000)
+Visit: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
-### 5. Standalone Execution (optional)
+---
 
-To test algorithms directly without Django:
+## 🛠️ Development Setup
 
+### Python Version
+- **Required**: Python 3.11+
+- **Tested**: Python 3.12.2
+
+### Environment Variables
+
+The application supports the following environment variables (see `.env.example`):
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SECRET_KEY` | Django secret key (required for production) | Development key |
+| `DEBUG` | Enable debug mode | `True` |
+| `ALLOWED_HOSTS` | Comma-separated allowed hosts | `localhost,127.0.0.1` |
+| `DEBUG_SUPPORT` | Enable detailed support constraint logging | `0` |
+| `MEDIA_ROOT` | Media files directory | `media` |
+| `STATIC_ROOT` | Static files directory | `staticfiles` |
+
+**Security Note**: Never commit `.env` with real secrets to version control!
+
+### Running Optimization Algorithms
+
+**Genetic Algorithm (GA)**:
 ```bash
-# Default test file
-python main.py
-
-# Specific JSON file
-python main.py data/samples/0109.json
-
-# Greedy mode
-python main.py --algorithm greedy
-
-# Genetic Algorithm mode (default)
-python main.py --algorithm genetic
+python main.py data/samples/0110.json
 ```
 
-## 📊 Input Data Format (JSON)
+**Differential Evolution (DE)**:
+```python
+from src.core.optimizer_de import run_de
+from src.models.container import PaletConfig
+
+# Configure and run
+palet_cfg = PaletConfig(length=120, width=100, height=150, max_weight=1000)
+best_solution, history = run_de(
+    urunler=products,
+    palet_cfg=palet_cfg,
+    population_size=80,  # Auto: max(60, 0.8*N)
+    generations=50,
+    use_rotations=False
+)
+```
+
+### Testing
+
+Run optimization tests:
+```bash
+# Test gravity constraint
+DEBUG_SUPPORT=1 python test_gravity_constraint.py
+
+# Test productionization features
+DEBUG_SUPPORT=1 python test_productionization.py
+```
+
+### Algorithm Selection
+
+The web interface supports both optimization algorithms:
+- **Genetic Algorithm (GA)**: Traditional evolutionary approach
+- **Differential Evolution (DE)**: Advanced hybrid mutation strategy with Amazon-style stability constraints
+
+**Key Parameters**:
+- **GA**: Population size, generations, mutation rate, crossover rate
+- **DE**: NP (min: max(60, 0.8×N)), generations, F (adaptive 0.4-0.9), CR (0.9)
+- **Gravity Constraint**: min_support_ratio = 0.40 (40% support required above ground)
+
+---
+
+##  Input Data Format (JSON)
 
 ```json
 {
