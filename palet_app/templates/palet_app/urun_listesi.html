@@ -120,12 +120,75 @@
         </div>
     </div>
 
+    <!-- Algoritma Seçimi ve Başlat Butonu -->
+    <div class="bg-white shadow-lg rounded-lg p-6 mb-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">
+            <i class="fas fa-cogs text-blue-600 mr-2"></i>
+            Optimizasyon Algoritması Seçimi
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <!-- Genetik Algoritma -->
+            <label class="cursor-pointer">
+                <input type="radio" name="algoritma" value="genetic" class="hidden peer" checked>
+                <div class="border-2 border-gray-300 rounded-xl p-6 peer-checked:border-blue-600 peer-checked:bg-blue-50 transition-all hover:shadow-md">
+                    <div class="flex items-center mb-3">
+                        <div class="bg-blue-100 rounded-full p-3 mr-3">
+                            <i class="fas fa-dna text-blue-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 text-lg">Genetik Algoritma (GA)</h4>
+                            <span class="text-xs text-gray-500 bg-blue-100 px-2 py-1 rounded-full">Varsayılan</span>
+                        </div>
+                    </div>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>Hızlı yakınsama (10-20 nesil)</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>İyi kalite çözümler</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>Sezgisel kodlama</li>
+                        <li><i class="fas fa-clock text-blue-500 mr-2"></i>Süre: ~8-12 saniye</li>
+                    </ul>
+                </div>
+            </label>
+            
+            <!-- Differential Evolution -->
+            <label class="cursor-pointer">
+                <input type="radio" name="algoritma" value="differential_evolution" class="hidden peer">
+                <div class="border-2 border-gray-300 rounded-xl p-6 peer-checked:border-purple-600 peer-checked:bg-purple-50 transition-all hover:shadow-md">
+                    <div class="flex items-center mb-3">
+                        <div class="bg-purple-100 rounded-full p-3 mr-3">
+                            <i class="fas fa-atom text-purple-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 text-lg">Differential Evolution (DE)</h4>
+                            <span class="text-xs text-white bg-gradient-to-r from-purple-500 to-pink-500 px-2 py-1 rounded-full">İleri Seviye</span>
+                        </div>
+                    </div>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li><i class="fas fa-trophy text-yellow-500 mr-2"></i>En yüksek kalite çözümler</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>Fitness önbellekleme</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>İki aşamalı değerlendirme</li>
+                        <li><i class="fas fa-clock text-purple-500 mr-2"></i>Süre: ~10-15 saniye</li>
+                    </ul>
+                </div>
+            </label>
+        </div>
+        
+        <!-- Açıklama Metni -->
+        <div id="algorithmDescription" class="bg-gray-50 border-l-4 border-blue-500 p-4 mb-4 rounded">
+            <p class="text-sm text-gray-700">
+                <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                <strong>Genetik Algoritma</strong> hızlı ve güvenilir sonuçlar için önerilir. 
+                Çoğu durumda en iyi seçimdir.
+            </p>
+        </div>
+    </div>
+
     <div class="flex justify-center space-x-4">
         <a href="{% url 'palet_app:home' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-xl transition-colors">
             <i class="fas fa-arrow-left mr-2"></i> Geri Dön
         </a>
         <button id="startOptimizationBtn" class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 px-8 rounded-xl transition-all transform hover:scale-105 shadow-lg">
-            <i class="fas fa-play mr-2"></i> Optimizasyona Başla
+            <i class="fas fa-play mr-2"></i> Genetik Algoritma ile Başla
         </button>
     </div>
 </div>
@@ -136,19 +199,63 @@
 $(document).ready(function() {
     let isProcessing = false;
     
+    // Algoritma seçimi değiştiğinde açıklamayı güncelle
+    $('input[name="algoritma"]').on('change', function() {
+        const algoritma = $(this).val();
+        const descriptionDiv = $('#algorithmDescription');
+        
+        if (algoritma === 'genetic') {
+            descriptionDiv.html(`
+                <p class="text-sm text-gray-700">
+                    <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                    <strong>Genetik Algoritma</strong> hızlı ve güvenilir sonuçlar için önerilir. 
+                    Çoğu durumda en iyi seçimdir.
+                </p>
+            `).removeClass('border-purple-500').addClass('border-blue-500');
+            
+            if (!isProcessing) {
+                $('#startOptimizationBtn')
+                    .html('<i class="fas fa-play mr-2"></i> Genetik Algoritma ile Başla')
+                    .removeClass('from-purple-600 to-pink-600')
+                    .addClass('from-blue-600 to-purple-600');
+            }
+        } else if (algoritma === 'differential_evolution') {
+            descriptionDiv.html(`
+                <p class="text-sm text-gray-700">
+                    <i class="fas fa-info-circle text-purple-500 mr-2"></i>
+                    <strong>Differential Evolution</strong> en yüksek kalite çözümler için gelişmiş teknikler kullanır.
+                    Fitness önbellekleme ve iki aşamalı değerlendirme ile %5-10 daha iyi sonuçlar sağlar.
+                </p>
+            `).removeClass('border-blue-500').addClass('border-purple-500');
+            
+            if (!isProcessing) {
+                $('#startOptimizationBtn')
+                    .html('<i class="fas fa-atom mr-2"></i> Differential Evolution ile Başla')
+                    .removeClass('from-blue-600 to-purple-600')
+                    .addClass('from-purple-600 to-pink-600');
+            }
+        }
+    });
+    
     $('#startOptimizationBtn').on('click', function(e) {
         e.preventDefault();
         if (isProcessing) return false;
         isProcessing = true;
         
+        const selectedAlgorithm = $('input[name="algoritma"]:checked').val();
+        const algorithmName = selectedAlgorithm === 'genetic' ? 'Genetik Algoritma' : 'Differential Evolution';
+        const algorithmIcon = selectedAlgorithm === 'genetic' ? '🧬' : '⚛️';
+        
         $.ajax({
             url: '{% url "palet_app:start_placement" %}',
             type: 'POST',
-            data: JSON.stringify({ algoritma: 'genetic' }),
+            data: JSON.stringify({ algoritma: selectedAlgorithm }),
             contentType: 'application/json',
             headers: { 'X-CSRFToken': '{{ csrf_token }}' },
             beforeSend: function() {
-                $('#startOptimizationBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> 🧬 Genetik Algoritma Başlatılıyor...');
+                $('#startOptimizationBtn')
+                    .prop('disabled', true)
+                    .html(`<i class="fas fa-spinner fa-spin mr-2"></i> ${algorithmIcon} ${algorithmName} Başlatılıyor...`);
             },
             success: function(response) {
                 if (response.success) {
@@ -156,7 +263,7 @@ $(document).ready(function() {
                 } else {
                     alert('Hata: ' + response.error);
                     isProcessing = false;
-                    $('#startOptimizationBtn').prop('disabled', false).html('<i class="fas fa-play mr-2"></i> Optimizasyona Başla');
+                    resetButton(selectedAlgorithm);
                 }
             },
             error: function(xhr) {
@@ -167,19 +274,23 @@ $(document).ready(function() {
                     alert('Optimizasyon başlatılırken bir hata oluştu.');
                 }
                 isProcessing = false;
-                $('#startOptimizationBtn').prop('disabled', false).html('<i class="fas fa-play mr-2"></i> Optimizasyona Başla');
+                resetButton(selectedAlgorithm);
             }
         });
         return false;
     });
     
-    $('input[name="algoritma"]').on('change', function() {
-        const algoritma = $(this).val();
-        const text = algoritma === 'genetic' ? 'Genetik Algoritma ile Başla' : 'Hızlı Optimizasyon ile Başla';
-        if (!isProcessing) {
-            $('#startOptimizationBtn').html('<i class="fas fa-play mr-2"></i> ' + text);
+    function resetButton(algorithm) {
+        if (algorithm === 'genetic') {
+            $('#startOptimizationBtn')
+                .prop('disabled', false)
+                .html('<i class="fas fa-play mr-2"></i> Genetik Algoritma ile Başla');
+        } else {
+            $('#startOptimizationBtn')
+                .prop('disabled', false)
+                .html('<i class="fas fa-atom mr-2"></i> Differential Evolution ile Başla');
         }
-    });
+    }
 });
 </script>
 {% endblock %}
