@@ -64,9 +64,12 @@ class Optimization(models.Model):
         durum = json.loads(self.islem_durumu)
         durum['messages'].append(mesaj)
         durum['current_step'] += 1
+        # Clamp: current_step never exceeds total_steps
+        total = max(1, durum.get('total_steps', 5))
+        durum['current_step'] = min(durum['current_step'], total)
         self.islem_durumu = json.dumps(durum)
         self.save()
-    
+
     def get_islem_durumu(self):
         """İşlem durumunu dict olarak döner."""
-        return json.loads(self.islem_durumu) 
+        return json.loads(self.islem_durumu)
