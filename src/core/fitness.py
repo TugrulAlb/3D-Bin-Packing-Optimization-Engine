@@ -21,7 +21,7 @@ import logging
 import math
 import os
 from dataclasses import dataclass
-from .packing import pack_maximal_rectangles
+from .packing import pack_maximal_rectangles, snap_z, compute_corner_support
 from ..utils.helpers import urun_hacmi
 from ..models.container import PaletConfig
 
@@ -64,6 +64,14 @@ W_UNDERFILL = 8000    # (MIN_UTIL - u)^2 çarpanı  [5000–15000]
 W_VARIANCE  = 3000    # Palet doluluk varyansı çarpanı  [1000–5000]
 
 # ---------------------------------------------------------------
+# KOMPAKSIYON METRİKLERİ  (fragmantasyon + dikey düzleme)
+# ---------------------------------------------------------------
+# Boş hücre başına ceza; 1 adet bileşik boşluk normaldir (0'dan başla).
+W_FRAGMENTATION       = 500    # Ekstra her parça için  [200–1000]
+# Üst-z varyansı çarpanı (cm² biriminde); düzün top = düşük varyans.
+W_VERTICAL_COMPACTION = 200    # [100–500]
+
+# ---------------------------------------------------------------
 # İÇ SAYAÇ – cavity throttle için (modül seviyesi, thread-safe değil
 # ama GA tek-thread'li olduğu için sorun olmaz)
 _cavity_eval_counter = 0
@@ -82,15 +90,15 @@ class AdaptiveWeights:
     """
     
     def __init__(self):
-        self.w_pallet_count = 15000
-        self.w_optimal_bonus = 150000
-        self.w_volume = 20000
-        self.w_weight_violation = 1000000
-        self.w_physical_violation = 10000000
+        self.w_pallet_count = 50_000   # Raised: must dominate w_volume
+        self.w_optimal_bonus = 150_000
+        self.w_volume = 500            # Lowered: secondary to pallet count
+        self.w_weight_violation = 1_000_000
+        self.w_physical_violation = 10_000_000
         self.w_cog_penalty = 0
-        self.w_stacking_penalty = 100000
-        self.MAX_VOLUME = 40000
-        self.MAX_PALLET_COUNT = 50000
+        self.w_stacking_penalty = 100_000
+        self.MAX_VOLUME = 1_000        # Cap for adapted w_volume
+        self.MAX_PALLET_COUNT = 100_000
         
     def adapt(self, best_chromosome, theo_min_pallets):
         """Performansa göre ağırlıkları ayarla."""
@@ -427,6 +435,79 @@ def _calculate_cavity_penalty(items, palet_l, palet_w, grid_size=CAVITY_GRID):
 
 
 # ====================================================================
+# KOMPAKSIYON METRİK FONKSİYONLARI
+# ====================================================================
+
+def compute_void_volume(pallet_items, palet_cfg):
+    """
+    Gerçek boş hacim (cm³).
+
+    Tüm ürünlerin toplam hacmi palet hacminden çıkarılır.
+    Mevcut fill_ratio bonusuyla örtüşse de dışarıdan çağrılabilir
+    bağımsız bir metrik olarak kullanılabilir.
+    """
+    item_vol = sum(i['L'] * i['W'] * i['H'] for i in pallet_items)
+    return max(0.0, palet_cfg.volume - item_vol)
+
+
+def compute_fragmentation_score(pallet_items, palet_l, palet_w, grid_size=10.0):
+    """
+    XY projeksiyonundaki birbirinden kopuk boş bölge sayısını döndürür.
+
+    Kaba bir ızgara üzerinde BFS yaparak bağlantılı boş alan bileşenlerini
+    sayar. Tek bileşen (1) normaldir; fazlası parçalanmış doluluk gösterir.
+
+    grid_size büyüdükçe hızlanır, hassasiyet azalır.
+    O(cols × rows) — 120×80 palet için 12×8 = 96 hücre.
+    """
+    from collections import deque
+    if not pallet_items:
+        return 0
+    cols = max(1, math.ceil(palet_l / grid_size))
+    rows = max(1, math.ceil(palet_w / grid_size))
+    occupied = [[False] * cols for _ in range(rows)]
+    for item in pallet_items:
+        c0 = max(0, int(item['x'] / grid_size))
+        c1 = min(cols, math.ceil((item['x'] + item['L']) / grid_size))
+        r0 = max(0, int(item['y'] / grid_size))
+        r1 = min(rows, math.ceil((item['y'] + item['W']) / grid_size))
+        for r in range(r0, r1):
+            for c in range(c0, c1):
+                occupied[r][c] = True
+    visited = [[False] * cols for _ in range(rows)]
+    components = 0
+    for sr in range(rows):
+        for sc in range(cols):
+            if not occupied[sr][sc] and not visited[sr][sc]:
+                components += 1
+                q = deque([(sr, sc)])
+                visited[sr][sc] = True
+                while q:
+                    r, c = q.popleft()
+                    for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                        nr, nc = r + dr, c + dc
+                        if 0 <= nr < rows and 0 <= nc < cols:
+                            if not occupied[nr][nc] and not visited[nr][nc]:
+                                visited[nr][nc] = True
+                                q.append((nr, nc))
+    return components
+
+
+def compute_vertical_compaction_score(pallet_items):
+    """
+    Üst-z (z+H) değerlerinin varyansı.
+
+    Düşük varyans → daha düz üst yüzey → daha kompakt istif.
+    Tek öğede anlamsız; 0.0 döndürülür.
+    """
+    if len(pallet_items) < 2:
+        return 0.0
+    tops = [i['z'] + i['H'] for i in pallet_items]
+    mean_t = sum(tops) / len(tops)
+    return sum((t - mean_t) ** 2 for t in tops) / len(tops)
+
+
+# ====================================================================
 # ANA FITNESS FONKSİYONU
 # ====================================================================
 
@@ -477,14 +558,16 @@ def evaluate_fitness(chromosome, palet_cfg: PaletConfig) -> FitnessResult:
         extra_pallets = P_GA - theo_min
         fitness_score -= weights["w_pallet_count"] * extra_pallets
     
-    # --- ÖNCELİK 2: DOLULUK ORANI ---
+    # --- ÖNCELİK 2: DOLULUK ORANI (global avg — per-pallet sum kaldırıldı) ---
+    # Uses avg_doluluk (scalar [0..1]) instead of summing per-pallet fill^4,
+    # which prevented volume inflation from incentivising more pallets.
     for pallet in pallets:
         p_vol = sum(i["L"] * i["W"] * i["H"] for i in pallet["items"])
         fill_ratio = p_vol / palet_cfg.volume
         total_fill_ratio += fill_ratio
-        fitness_score += weights["w_volume"] * (fill_ratio ** 4)
-    
+
     avg_doluluk = total_fill_ratio / P_GA if P_GA > 0 else 0.0
+    fitness_score += weights["w_volume"] * avg_doluluk
 
     # --- UNDERFILL + VARYANS CEZALARI ---
     pallet_utils = [
@@ -563,8 +646,17 @@ def evaluate_fitness(chromosome, palet_cfg: PaletConfig) -> FitnessResult:
         # Corner/Overhang Penalty: z>0 desteksiz köşeler ve çıkıntı mesafesi
         # CORNER_HARD_REJECT=True ise packing zaten reddeder; burada soft ek baskı.
         corner_score, overhang_score = _calculate_corner_overhang_penalty(items)
-        fitness_score -= W_CORNER   * corner_score
-        fitness_score -= W_OVERHANG * overhang_score
+        from .packing import W_CORNER_PENALTY
+        fitness_score -= W_CORNER_PENALTY * corner_score
+        fitness_score -= W_CORNER_PENALTY * overhang_score
+
+        # Fragmantasyon cezası: XY'deki kopuk boş bölge sayısı
+        frag = compute_fragmentation_score(items, palet_cfg.length, palet_cfg.width)
+        fitness_score -= W_FRAGMENTATION * max(0, frag - 1)   # 1 bölge normaldir
+
+        # Dikey kompaksiyon cezası: üst-z varyansı
+        vc = compute_vertical_compaction_score(items)
+        fitness_score -= W_VERTICAL_COMPACTION * vc
     
     # Numerik stabilite koruması
     if not isinstance(fitness_score, (int, float)) or math.isnan(fitness_score):
