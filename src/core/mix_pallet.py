@@ -9,7 +9,7 @@ Bu modül Django'dan bağımsızdır - saf veri yapıları döndürür.
 """
 
 from .genetic_algorithm import run_ga
-from .packing import pack_maximal_rectangles
+from .packing_first_fit import pack_maximal_rectangles_first_fit
 from ..models.container import PaletConfig
 
 
@@ -43,7 +43,7 @@ def mix_palet_yerlestirme_main(mix_pool, palet_cfg: PaletConfig, start_id=1):
     )
     
     # 2. En İyi Çözümü Decode Et
-    final_pallets_data = pack_maximal_rectangles(best_solution.urunler, palet_cfg)
+    final_pallets_data = pack_maximal_rectangles_first_fit(best_solution.urunler, palet_cfg)
     
     # 3. Sonuçları Formatla
     mix_pallets = []
