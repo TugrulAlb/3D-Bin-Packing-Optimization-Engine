@@ -11,12 +11,35 @@ from .services import (
     single_palet_yerlestirme,
     chromosome_to_palets,
     mix_palet_data_to_django,
+    merge_repack_service,
+    merge_repack_mix_service,
     palet_gorsellestir,
     ozet_grafikler_olustur,
 )
 from src.models import PaletConfig, UrunData
 from src.core.mix_pallet import mix_palet_yerlestirme_main as mix_palet_yerlestirme
 from src.utils.visualization import renk_uret
+
+
+# ====================================================================
+# PROGRESS HELPER (thread-safe, no external deps)
+# ====================================================================
+
+def _normalize_progress(current_step, total_steps, completed=False):
+    """
+    Returns safe (current_step, total_steps, percent) tuple.
+    - total_steps is always >= 1
+    - current_step is always in [0, total_steps]
+    - percent is always in [0, 100]
+    - If completed=True, percent is forced to 100
+    """
+    total = max(1, int(total_steps))
+    cur   = max(0, min(int(current_step), total))
+    if completed:
+        return total, total, 100
+    pct = int(round(100 * cur / total))
+    pct = max(0, min(100, pct))
+    return cur, total, pct
 
 
 def upload_result(request):
@@ -398,6 +421,37 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
             mix_paletler = mix_palet_data_to_django(mix_palet_data, palet_cfg, optimization)
             optimization.islem_adimi_ekle(f"{len(mix_paletler)} adet mix palet oluşturuldu.")
         
+        # ── Merge & Repack post-optimizasyon ─────────────────────────────────
+        if len(mix_paletler) >= 2:
+            # Aşama 1 — İteratif BFD (belirlenimsel, hızlı)
+            optimization.islem_adimi_ekle(
+                f"🔁 [1/2] Merge & Repack BFD başlıyor "
+                f"({len(mix_paletler)} mix palet → iteratif birleştirme)..."
+            )
+            mix_paletler, mix_metrics = merge_repack_mix_service(
+                mix_paletler,
+                palet_cfg,
+                optimization,
+                baslangic_id=len(single_paletler) + 1,
+                urun_data_listesi=urun_data_listesi,
+            )
+            optimization.islem_adimi_ekle(mix_metrics.summary())
+
+            # Aşama 2 — Random Restart (stokastik, BFD sonrası kalan fırsatı karolar)
+            if len(mix_paletler) >= 2:
+                optimization.islem_adimi_ekle(
+                    f"🔁 [2/2] Merge & Repack Random Restart başlıyor "
+                    f"({len(mix_paletler)} palet kaldı)..."
+                )
+                mix_paletler, mr_metrics = merge_repack_service(
+                    mix_paletler,
+                    palet_cfg,
+                    optimization,
+                    baslangic_id=len(single_paletler) + 1,
+                    urun_data_listesi=urun_data_listesi,
+                )
+                optimization.islem_adimi_ekle(mr_metrics.summary())
+
         # Adım 4: İstatistikleri güncelle (Görselleştirme artık on-the-fly yapılıyor)
         optimization.islem_adimi_ekle("İstatistikler hesaplanıyor...")
         
@@ -623,11 +677,17 @@ def optimization_status(request):
                 'next_url': reverse('palet_app:analysis')
             })
         
+        cur, tot, pct = _normalize_progress(
+            durum.get('current_step', 0),
+            durum.get('total_steps', 5),
+            completed=False
+        )
         return JsonResponse({
             'success': True,
             'completed': False,
-            'current_step': durum.get('current_step', 0),
-            'total_steps': durum.get('total_steps', 5),
+            'current_step': cur,
+            'total_steps': tot,
+            'percent': pct,
             'messages': durum.get('messages', [])
         })
         
