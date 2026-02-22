@@ -253,11 +253,10 @@ def urun_listesi(request):
     return render(request, 'palet_app/urun_listesi.html', context)
 
 # Arka planda çalışacak optimizasyon işlemi
-def run_optimization(urun_verileri, container_info, optimization_id, algoritma='greedy'):
+def run_optimization(urun_verileri, container_info, optimization_id, algoritma='greedy', ga_mode='balanced'):
     """
     Arka planda çalışacak optimizasyon işlemi. Bu fonksiyon bir thread içinde çalışır.
-    Kullanilacak algoritma HER ZAMAN veritabanindaki Optimization kaydindan okunur
-    (baslatma isteğinde kaydedilen seçim). Parametre sadece yedek/fallback içindir.
+    ga_mode: sadece genetic için kullanılır — 'fast', 'balanced', 'quality'.
     """
     try:
         optimization = Optimization.objects.get(id=optimization_id)
@@ -322,27 +321,45 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
         if algoritma == 'genetic':
             from src.core.genetic_algorithm import run_ga
             
-            optimization.islem_adimi_ekle("Genetik Algoritma Motoru ile mix paletler olusturuluyor...")
-            optimization.islem_adimi_ekle("Bu işlem ürün sayısına göre 1-3 dakika sürebilir...")
-            
-            # Ürün sayısına göre dinamik parametreler
             urun_sayisi = len(urun_data_listesi)
-            
-            # Optimize edilmiş parametreler
-            pop_size = 100 if urun_sayisi > 500 else 80
-            generations = 200 if urun_sayisi > 500 else 150
-            
-            optimization.islem_adimi_ekle(f"Parametreler: Pop={pop_size}, Nesil={generations}, Ürün={urun_sayisi}")
-            
-            # GA motorunu çalıştır (yuksek mutasyon = daha fazla kesif, doluluk icin)
+            ga_mode = (ga_mode or 'balanced').strip().lower()
+            if ga_mode not in ('fast', 'balanced', 'quality'):
+                ga_mode = 'balanced'
+
+            if ga_mode == 'fast':
+                optimization.islem_adimi_ekle("Genetik Algoritma (Hızlı mod) ile mix paletler olusturuluyor...")
+                pop_size = 50 if urun_sayisi > 300 else 40
+                generations = 80 if urun_sayisi > 300 else 60
+                elitism = 2
+                mutation_rate = 0.24
+                tournament_k = 3
+            elif ga_mode == 'quality':
+                optimization.islem_adimi_ekle("Genetik Algoritma (Kaliteli mod) ile mix paletler olusturuluyor...")
+                pop_size = 150 if urun_sayisi > 500 else 120
+                generations = 280 if urun_sayisi > 500 else 220
+                elitism = max(4, min(10, pop_size // 12))
+                mutation_rate = 0.16
+                tournament_k = 4
+            else:
+                optimization.islem_adimi_ekle("Genetik Algoritma (Dengeli mod) ile mix paletler olusturuluyor...")
+                pop_size = 100 if urun_sayisi > 500 else (85 if urun_sayisi > 200 else 70)
+                generations = min(200, 120 + urun_sayisi // 10)
+                elitism = max(2, min(5, pop_size // 20))
+                mutation_rate = 0.20
+                tournament_k = 3
+
+            optimization.islem_adimi_ekle(
+                f"Mod: {ga_mode.upper()} | Pop={pop_size}, Nesil={generations}, Elit={elitism}, Mut={mutation_rate}, K={tournament_k}, Ürün={urun_sayisi}"
+            )
+
             best_chromosome, history = run_ga(
                 urunler=urun_data_listesi,
                 palet_cfg=palet_cfg,
                 population_size=pop_size,
                 generations=generations,
-                mutation_rate=0.28,
-                tournament_k=4,
-                elitism=3
+                mutation_rate=mutation_rate,
+                tournament_k=tournament_k,
+                elitism=elitism
             )
             
             if best_chromosome:
@@ -580,7 +597,9 @@ def start_placement(request):
     # Frontend'den gelen algoritma secimi (genetic | differential_evolution | greedy)
     import json as json_module
     algoritma_raw = None
+    ga_mode = 'balanced'
     try:
+        body = {}
         if request.body:
             body = json_module.loads(request.body)
             algoritma_raw = body.get('algoritma')
@@ -593,7 +612,11 @@ def start_placement(request):
         if algoritma not in ('genetic', 'differential_evolution', 'greedy'):
             print(f"[start_placement] Gecersiz algoritma '{algoritma_raw}' -> genetic kullaniliyor")
             algoritma = 'genetic'
-        print(f"[start_placement] Algoritma (gelen): {algoritma_raw!r} -> kullanilan: {algoritma!r}")
+        if algoritma == 'genetic':
+            gm = (body.get('ga_mode') or 'balanced').strip().lower()
+            if gm in ('fast', 'balanced', 'quality'):
+                ga_mode = gm
+        print(f"[start_placement] Algoritma: {algoritma!r}, GA mod: {ga_mode!r}")
     except Exception as e:
         print(f"[start_placement] Body parse hatasi, varsayilan genetic kullaniliyor: {e}")
         algoritma = 'genetic'
@@ -645,7 +668,7 @@ def start_placement(request):
         
         # İşlemi background thread'de başlat
         try:
-            thread = Thread(target=run_optimization, args=(request.session['urun_verileri'], container_dict, optimization.id, algoritma))
+            thread = Thread(target=run_optimization, args=(request.session['urun_verileri'], container_dict, optimization.id, algoritma, ga_mode))
             thread.daemon = True
             thread.start()
             print(f"Thread baslatildi (ID: {optimization.id})")
