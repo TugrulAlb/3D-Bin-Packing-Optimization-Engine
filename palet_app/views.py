@@ -256,18 +256,16 @@ def urun_listesi(request):
 def run_optimization(urun_verileri, container_info, optimization_id, algoritma='greedy'):
     """
     Arka planda çalışacak optimizasyon işlemi. Bu fonksiyon bir thread içinde çalışır.
-    
-    Args:
-        urun_verileri: Ürün verileri listesi
-        container_info: Container bilgileri dict (length, width, height, weight)
-        optimization_id: Optimizasyon ID'si
-        algoritma: 'greedy', 'genetic' veya 'differential_evolution'
+    Kullanilacak algoritma HER ZAMAN veritabanindaki Optimization kaydindan okunur
+    (baslatma isteğinde kaydedilen seçim). Parametre sadece yedek/fallback içindir.
     """
-    print(f"\nrun_optimization() basladi (ID: {optimization_id}, Algoritma: {algoritma})")
-    
     try:
-        # Optimizasyon objesi
         optimization = Optimization.objects.get(id=optimization_id)
+        # Tek dogru kaynak: baslatma aninda kaydedilen algoritma (DB)
+        algoritma = (optimization.algoritma or 'greedy').strip().lower()
+        if algoritma not in ('genetic', 'differential_evolution', 'greedy'):
+            algoritma = 'greedy'
+        print(f"\nrun_optimization() basladi (ID: {optimization_id}, Algoritma DB'den: {algoritma})")
         print(f"Optimization objesi bulundu (ID: {optimization_id})")
         
         # Hangi algoritmanin calistigini net yaz (yanlis baglanti kontrolu icin)
@@ -336,13 +334,13 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
             
             optimization.islem_adimi_ekle(f"Parametreler: Pop={pop_size}, Nesil={generations}, Ürün={urun_sayisi}")
             
-            # GA motorunu çalıştır
+            # GA motorunu çalıştır (yuksek mutasyon = daha fazla kesif, doluluk icin)
             best_chromosome, history = run_ga(
                 urunler=urun_data_listesi,
                 palet_cfg=palet_cfg,
                 population_size=pop_size,
                 generations=generations,
-                mutation_rate=0.2,
+                mutation_rate=0.28,
                 tournament_k=4,
                 elitism=3
             )
@@ -581,11 +579,21 @@ def start_placement(request):
     
     # Frontend'den gelen algoritma secimi (genetic | differential_evolution | greedy)
     import json as json_module
+    algoritma_raw = None
     try:
-        body = json_module.loads(request.body) if request.body else {}
-        algoritma = body.get('algoritma', 'genetic')
-        if algoritma not in ('genetic', 'differential_evolution', 'greedy'):
+        if request.body:
+            body = json_module.loads(request.body)
+            algoritma_raw = body.get('algoritma')
+        if algoritma_raw is None:
+            algoritma_raw = request.POST.get('algoritma')
+        if algoritma_raw is not None:
+            algoritma = str(algoritma_raw).strip().lower()
+        else:
             algoritma = 'genetic'
+        if algoritma not in ('genetic', 'differential_evolution', 'greedy'):
+            print(f"[start_placement] Gecersiz algoritma '{algoritma_raw}' -> genetic kullaniliyor")
+            algoritma = 'genetic'
+        print(f"[start_placement] Algoritma (gelen): {algoritma_raw!r} -> kullanilan: {algoritma!r}")
     except Exception as e:
         print(f"[start_placement] Body parse hatasi, varsayilan genetic kullaniliyor: {e}")
         algoritma = 'genetic'
@@ -712,18 +720,15 @@ def analysis(request):
     print(f"analysis view cagrildi (ID: {optimization_id})")
     
     try:
-        # Optimizasyon objesi
         optimization = get_object_or_404(Optimization, id=optimization_id)
         
         print(f"   Tamamlandı: {optimization.tamamlandi}")
         print(f"   Toplam Palet: {optimization.toplam_palet}")
         
-        # Eğer optimizasyon henüz tamamlanmadıysa, işleniyor sayfasına yönlendir
         if not optimization.tamamlandi:
             print(f"UYARI: Optimizasyon henuz tamamlanmamis, processing'e yonlendiriliyor...")
             return redirect('palet_app:processing')
         
-        # Paletleri al
         paletler = Palet.objects.filter(optimization=optimization).order_by('palet_id')
         print(f"   Bulunan palet sayısı: {paletler.count()}")
         
