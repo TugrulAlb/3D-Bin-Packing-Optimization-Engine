@@ -256,20 +256,20 @@ def urun_listesi(request):
 def run_optimization(urun_verileri, container_info, optimization_id, algoritma='greedy'):
     """
     Arka planda çalışacak optimizasyon işlemi. Bu fonksiyon bir thread içinde çalışır.
-    
-    Args:
-        urun_verileri: Ürün verileri listesi
-        container_info: Container bilgileri dict (length, width, height, weight)
-        optimization_id: Optimizasyon ID'si
-        algoritma: 'greedy', 'genetic' veya 'differential_evolution'
+    Kullanilacak algoritma HER ZAMAN veritabanindaki Optimization kaydindan okunur
+    (baslatma isteğinde kaydedilen seçim). Parametre sadece yedek/fallback içindir.
     """
-    print(f"\n🔄 run_optimization() başladı (ID: {optimization_id}, Algoritma: {algoritma})")
-    
     try:
-        # Optimizasyon objesi
         optimization = Optimization.objects.get(id=optimization_id)
-        print(f"✅ Optimization objesi bulundu (ID: {optimization_id})")
+        # Tek dogru kaynak: baslatma aninda kaydedilen algoritma (DB)
+        algoritma = (optimization.algoritma or 'greedy').strip().lower()
+        if algoritma not in ('genetic', 'differential_evolution', 'greedy'):
+            algoritma = 'greedy'
+        print(f"\nrun_optimization() basladi (ID: {optimization_id}, Algoritma DB'den: {algoritma})")
+        print(f"Optimization objesi bulundu (ID: {optimization_id})")
         
+        # Hangi algoritmanin calistigini net yaz (yanlis baglanti kontrolu icin)
+        optimization.islem_adimi_ekle(f"[MOTOR] Algoritma: {algoritma.upper()}")
         # Adım 1: Ürünleri veritabanına kaydet
         optimization.islem_adimi_ekle("Ürün verileri yükleniyor...")
         
@@ -322,7 +322,7 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
         if algoritma == 'genetic':
             from src.core.genetic_algorithm import run_ga
             
-            optimization.islem_adimi_ekle("🧬 Genetik Algoritma Motoru ile mix paletler oluşturuluyor...")
+            optimization.islem_adimi_ekle("Genetik Algoritma Motoru ile mix paletler olusturuluyor...")
             optimization.islem_adimi_ekle("Bu işlem ürün sayısına göre 1-3 dakika sürebilir...")
             
             # Ürün sayısına göre dinamik parametreler
@@ -334,13 +334,13 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
             
             optimization.islem_adimi_ekle(f"Parametreler: Pop={pop_size}, Nesil={generations}, Ürün={urun_sayisi}")
             
-            # GA motorunu çalıştır
+            # GA motorunu çalıştır (yuksek mutasyon = daha fazla kesif, doluluk icin)
             best_chromosome, history = run_ga(
                 urunler=urun_data_listesi,
                 palet_cfg=palet_cfg,
                 population_size=pop_size,
                 generations=generations,
-                mutation_rate=0.2,
+                mutation_rate=0.28,
                 tournament_k=4,
                 elitism=3
             )
@@ -369,7 +369,7 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
         elif algoritma == 'differential_evolution':
             from src.core.optimizer_de import optimize_with_de
             
-            optimization.islem_adimi_ekle("⚛️ Differential Evolution (DE) Motoru ile mix paletler oluşturuluyor...")
+            optimization.islem_adimi_ekle("Differential Evolution (DE) Motoru ile mix paletler olusturuluyor...")
             optimization.islem_adimi_ekle("İleri seviye optimizasyon teknikleri kullanılıyor...")
             
             # Ürün sayısına göre dinamik parametreler
@@ -396,7 +396,7 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
             
             if best_chromosome:
                 optimization.islem_adimi_ekle(
-                    f"✅ DE En iyi çözüm: Fitness={best_chromosome.fitness:.2f}, "
+                    f"DE En iyi cozum: Fitness={best_chromosome.fitness:.2f}, "
                     f"Palet={best_chromosome.palet_sayisi}, "
                     f"Doluluk={best_chromosome.ortalama_doluluk:.2%}"
                 )
@@ -425,7 +425,7 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
         if len(mix_paletler) >= 2:
             # Aşama 1 — İteratif BFD (belirlenimsel, hızlı)
             optimization.islem_adimi_ekle(
-                f"🔁 [1/2] Merge & Repack BFD başlıyor "
+                f"[1/2] Merge & Repack BFD basliyor "
                 f"({len(mix_paletler)} mix palet → iteratif birleştirme)..."
             )
             mix_paletler, mix_metrics = merge_repack_mix_service(
@@ -440,7 +440,7 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
             # Aşama 2 — Random Restart (stokastik, BFD sonrası kalan fırsatı karolar)
             if len(mix_paletler) >= 2:
                 optimization.islem_adimi_ekle(
-                    f"🔁 [2/2] Merge & Repack Random Restart başlıyor "
+                    f"[2/2] Merge & Repack Random Restart basliyor "
                     f"({len(mix_paletler)} palet kaldı)..."
                 )
                 mix_paletler, mr_metrics = merge_repack_service(
@@ -491,7 +491,7 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
         
         optimization.yerlesmemis_urunler = son_yerlesmeyen_urunler
         
-        # 🎨 Tüm paletler için görselleri oluştur
+        # Tum paletler icin gorselleri olustur
         optimization.islem_adimi_ekle("Palet görselleri oluşturuluyor...")
         for palet in tum_paletler:
             if not palet.gorsel:  # Henüz görsel yoksa
@@ -502,16 +502,16 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
                     
                     png_content = palet_gorsellestir(palet, palet_urunleri, save_to_file=True)
                     palet.gorsel.save(f'palet_{palet.palet_id}.png', png_content, save=True)
-                    print(f"✅ Palet {palet.palet_id} görseli oluşturuldu")
+                    print(f"Palet {palet.palet_id} gorseli olusturuldu")
                 except Exception as e:
-                    print(f"⚠️ Palet {palet.palet_id} görseli oluşturulamadı: {str(e)}")
+                    print(f"UYARI: Palet {palet.palet_id} gorseli olusturulamadi: {str(e)}")
         
         # Optimizasyonu tamamla
         optimization.islem_adimi_ekle("Optimizasyon tamamlandı.")
         optimization.tamamla()
         
         print(f"\n{'='*60}")
-        print(f"✅ OPTİMİZASYON TAMAMLANDI")
+        print(f"OPTIMIZASYON TAMAMLANDI")
         print(f"{'='*60}")
         print(f"Optimization ID: {optimization_id}")
         print(f"Toplam Palet: {optimization.toplam_palet}")
@@ -525,7 +525,7 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
         import traceback
         error_detail = traceback.format_exc()
         print(f"\n{'='*60}")
-        print(f"❌ OPTİMİZASYON HATASI")
+        print(f"HATA: OPTIMIZASYON HATASI")
         print(f"{'='*60}")
         print(f"Optimization ID: {optimization_id}")
         print(f"HATA: {str(e)}")
@@ -548,17 +548,17 @@ def processing(request):
     """İşlem simülasyonu sayfası"""
     # Verilerin session'da olup olmadığını kontrol et
     if 'urun_verileri' not in request.session:
-        print(f"⚠️ processing: Session'da urun_verileri yok!")
+        print(f"UYARI: processing: Session'da urun_verileri yok!")
         return redirect('palet_app:home')
     
     # Container bilgisi var mı kontrol et
     container_info = request.session.get('container_info')
     if not container_info:
-        print(f"⚠️ processing: Session'da container_info yok!")
+        print(f"UYARI: processing: Session'da container_info yok!")
         return redirect('palet_app:home')
     
     optimization_id = request.session.get('optimization_id')
-    print(f"🔄 processing sayfası yüklendi (Optimization ID: {optimization_id})")
+    print(f"processing sayfasi yuklendi (Optimization ID: {optimization_id})")
     
     return render(request, 'palet_app/processing.html')
 
@@ -577,12 +577,25 @@ def start_placement(request):
     if not container_info:
         return JsonResponse({'success': False, 'error': 'Container bilgisi bulunamadı.'}, status=400)
     
-    # Genetik Algoritma kullan (varsayılan)
+    # Frontend'den gelen algoritma secimi (genetic | differential_evolution | greedy)
     import json as json_module
+    algoritma_raw = None
     try:
-        body = json_module.loads(request.body)
-        algoritma = body.get('algoritma', 'genetic')
-    except:
+        if request.body:
+            body = json_module.loads(request.body)
+            algoritma_raw = body.get('algoritma')
+        if algoritma_raw is None:
+            algoritma_raw = request.POST.get('algoritma')
+        if algoritma_raw is not None:
+            algoritma = str(algoritma_raw).strip().lower()
+        else:
+            algoritma = 'genetic'
+        if algoritma not in ('genetic', 'differential_evolution', 'greedy'):
+            print(f"[start_placement] Gecersiz algoritma '{algoritma_raw}' -> genetic kullaniliyor")
+            algoritma = 'genetic'
+        print(f"[start_placement] Algoritma (gelen): {algoritma_raw!r} -> kullanilan: {algoritma!r}")
+    except Exception as e:
+        print(f"[start_placement] Body parse hatasi, varsayilan genetic kullaniliyor: {e}")
         algoritma = 'genetic'
     
     # Container bilgilerini al
@@ -613,7 +626,7 @@ def start_placement(request):
         request.session.modified = True  # Session'ın güncellendiğini işaretle
         
         print(f"\n{'='*60}")
-        print(f"🚀 YENİ OPTİMİZASYON BAŞLATILDI")
+        print(f"YENI OPTIMIZASYON BASLATILDI")
         print(f"{'='*60}")
         print(f"Optimization ID: {optimization.id}")
         print(f"Algoritma: {algoritma}")
@@ -635,9 +648,9 @@ def start_placement(request):
             thread = Thread(target=run_optimization, args=(request.session['urun_verileri'], container_dict, optimization.id, algoritma))
             thread.daemon = True
             thread.start()
-            print(f"✅ Thread başlatıldı (ID: {optimization.id})")
+            print(f"Thread baslatildi (ID: {optimization.id})")
         except Exception as e:
-            print(f"❌ Thread başlatma hatası: {str(e)}")
+            print(f"HATA: Thread baslatma hatasi: {str(e)}")
             import traceback
             traceback.print_exc()
             return JsonResponse({
@@ -658,7 +671,7 @@ def optimization_status(request):
     # Optimizasyon ID'sini al
     optimization_id = request.session.get('optimization_id')
     if not optimization_id:
-        print(f"⚠️ optimization_status: Session'da optimization_id yok!")
+        print(f"UYARI: optimization_status: Session'da optimization_id yok!")
         return JsonResponse({'success': False, 'error': 'Optimizasyon bulunamadı.'}, status=400)
     
     try:
@@ -666,11 +679,11 @@ def optimization_status(request):
         optimization = Optimization.objects.get(id=optimization_id)
         durum = optimization.get_islem_durumu()
         
-        print(f"📊 Status check (ID: {optimization_id}): Completed={optimization.tamamlandi}, Step={durum.get('current_step', 0)}/{durum.get('total_steps', 5)}")
+        print(f"Status check (ID: {optimization_id}): Completed={optimization.tamamlandi}, Step={durum.get('current_step', 0)}/{durum.get('total_steps', 5)}")
         
         # Eğer işlem tamamlandıysa, analiz sayfasına yönlendir
         if optimization.tamamlandi:
-            print(f"✅ Optimization tamamlandı, yönlendirme yapılıyor...")
+            print(f"Optimization tamamlandi, yonlendirme yapiliyor...")
             return JsonResponse({
                 'success': True,
                 'completed': True,
@@ -692,7 +705,7 @@ def optimization_status(request):
         })
         
     except Optimization.DoesNotExist:
-        print(f"❌ Optimization bulunamadı (ID: {optimization_id})")
+        print(f"Optimization bulunamadi (ID: {optimization_id})")
         return JsonResponse({'success': False, 'error': 'Optimizasyon bulunamadı.'}, status=400)
 
 # Analiz sayfası
@@ -701,24 +714,21 @@ def analysis(request):
     # Optimizasyon ID'sini al
     optimization_id = request.session.get('optimization_id')
     if not optimization_id:
-        print(f"⚠️ analysis: Session'da optimization_id yok!")
+        print(f"UYARI: analysis: Session'da optimization_id yok!")
         return redirect('palet_app:home')
     
-    print(f"📈 analysis view çağrıldı (ID: {optimization_id})")
+    print(f"analysis view cagrildi (ID: {optimization_id})")
     
     try:
-        # Optimizasyon objesi
         optimization = get_object_or_404(Optimization, id=optimization_id)
         
         print(f"   Tamamlandı: {optimization.tamamlandi}")
         print(f"   Toplam Palet: {optimization.toplam_palet}")
         
-        # Eğer optimizasyon henüz tamamlanmadıysa, işleniyor sayfasına yönlendir
         if not optimization.tamamlandi:
-            print(f"⚠️ Optimizasyon henüz tamamlanmamış, processing'e yönlendiriliyor...")
+            print(f"UYARI: Optimizasyon henuz tamamlanmamis, processing'e yonlendiriliyor...")
             return redirect('palet_app:processing')
         
-        # Paletleri al
         paletler = Palet.objects.filter(optimization=optimization).order_by('palet_id')
         print(f"   Bulunan palet sayısı: {paletler.count()}")
         
@@ -735,11 +745,11 @@ def analysis(request):
             'bar_chart_html': bar_chart_html
         }
         
-        print(f"✅ Analysis sayfası render ediliyor...")
+        print(f"Analysis sayfasi render ediliyor...")
         return render(request, 'palet_app/analysis.html', context)
         
     except Optimization.DoesNotExist:
-        print(f"❌ Optimization bulunamadı (ID: {optimization_id})")
+        print(f"Optimization bulunamadi (ID: {optimization_id})")
         return redirect('palet_app:home')
 
 # Palet detay sayfası
