@@ -1,20 +1,13 @@
 """
-Fitness Değerlendirme Modülü
-==============================
+Fitness Değerlendirme Modülü (GA)
+==================================
 
-Genetik Algoritma bireylerinin (kromozomların) kalitesini ölçer.
-
-Değerlendirme Kriterleri (Öncelik Sırasıyla):
-    1. Palet sayısını minimize et (EN YÜKSEK ÖNCELİK)
-    2. Doluluk oranını maksimize et
-    3. Fiziksel kısıtları asla ihlal etme (KIRMIZI ÇİZGİ)
-    4. Ağırlık merkezi dengesini koru
-    5. İstifleme kurallarına uy
-
-Amazon-benzeri gerçekçi istif metrikleri (Ek):
-    6. Void Penalty   – bounding-box içindeki boş hacim cezası
-    7. Edge Bias      – kenarlara yaslama ödülü
-    8. Cavity Penalty – iç boşluk/baca kolonları cezası
+Öncelik:
+    1. YASAK (hard constraint): Taşma, ağırlık aşımı, havada kutu → çözüm GEÇERSİZ (fitness = INFEASIBLE).
+       Ceza değeri vermiyoruz; bu birey seçilmez. Genetik algoritma içinde standart "death penalty".
+    2. Palet sayısını minimize et (en az palet).
+    3. Doluluk oranını maksimize et (en fazla ürün).
+    4. Şekil/denge: COG, void, edge, cavity (ikincil, küçük ağırlık).
 """
 
 import logging
@@ -32,50 +25,31 @@ DEBUG_SUPPORT = os.getenv("DEBUG_SUPPORT") == "1"
 MIN_SUPPORT_RATIO = 0.40
 
 # ====================================================================
-# GERÇEKÇİ İSTİF KONFİGÜRASYONU  (Amazon-like packing)
+# YASAK: Herhangi bir ihlal varsa fitness = INFEASIBLE (ceza değil, geçersiz çözüm)
+# ÖNCELİK 2: PALET SAYISI → w_pallet_count, w_optimal_bonus
+# ÖNCELİK 3: DOLULUK     → w_volume, W_DENSITY_SQUARE, W_UNDERFILL
+# ÖNCELİK 4: Şekil       → void, edge, cavity, COG (küçük)
 # ====================================================================
-# Bu sabitleri buradan ayarlayın; başka dosyaya dokunmanıza gerek yok.
 
-# Void penalty: bounding-box içindeki boş hacim oranı cezası
-W_VOID   = 0.8     # [0.6 – 1.2]  Büyüdükçe kompaktlık baskısı artar
+INFEASIBLE = -1e9   # Taşma / ağırlık / destek ihlali = çözüm yasak (death penalty)
 
-# Edge bias: ortalama duvar uzaklığına göre ödül
-W_EDGE   = 0.15    # [0.1 – 0.3]  Küçük tutun; palet sayısını etkilemesin
+# Void / Edge / Cavity (şekil; ikincil)
+W_VOID   = 0.5
+W_EDGE   = 0.08
+W_CAVITY = 0.20
+CAVITY_GRID = 5.0
+CAVITY_THROTTLE = 4
 
-# Cavity penalty: XY footprint'teki iç boşluk (baca/oyuk) cezası
-W_CAVITY = 0.35    # [0.2 – 0.6]  Çok büyütmeyin; hesap ya­vaşlar
-
-# Cavity grid çözünürlüğü (cm). Küçüldükçe hassas ama yavaş.
-CAVITY_GRID = 5.0  # cm
-
-# Her N fitness değerlendirmesinde bir cavity hesabı yapılır (throttle).
-CAVITY_THROTTLE = 4   # 1 = her seferinde, 4 = her 4. bireyde
-
-# Küçük epsilon (float hassasiyeti)
 EPS_FITNESS = 1e-9
 
-# ---------------------------------------------------------------
-# UNDERFILL + VARYANS  (az dolu paletleri cezalandırır)
-# ---------------------------------------------------------------
-# Bir paletin doluluk oranı bu değerin altında kalırsa cezalandırılır.
-MIN_UTIL    = 0.45    # Eşik doluluk oranı  [0..1]
+# Doluluk
+MIN_UTIL    = 0.45
+W_UNDERFILL = 2000   # Az dolu palet cezası (ölçek: 2–5k)
+W_DENSITY_SQUARE = 3000   # fill_ratio^2 ödülü
 
-# Ceza büyüklükleri – doluluk türevi (gerçek fitness birimiyle uyumlu)
-W_UNDERFILL = 8000    # (MIN_UTIL - u)^2 çarpanı  [5000–15000]
-W_VARIANCE  = 3000    # Palet doluluk varyansı çarpanı  [1000–5000]
-
-# AMAZON-VARI DENGESİZLİK ÖDÜLÜ
-# Paletlerin doluluk oranlarının karesini alarak, dengesiz dağılımı (örn: %95, %5)
-# dengeli dağılıma (örn: %50, %50) tercih etmesini sağlarız.
-W_DENSITY_SQUARE = 5000
-
-# ---------------------------------------------------------------
-# KOMPAKSIYON METRİKLERİ  (fragmantasyon + dikey düzleme)
-# ---------------------------------------------------------------
-# Boş hücre başına ceza; 1 adet bileşik boşluk normaldir (0'dan başla).
-W_FRAGMENTATION       = 500    # Ekstra her parça için  [200–1000]
-# Üst-z varyansı çarpanı (cm² biriminde); düzün top = düşük varyans.
-W_VERTICAL_COMPACTION = 200    # [100–500]
+# Şekil (kompaksiyon)
+W_FRAGMENTATION       = 100
+W_VERTICAL_COMPACTION = 50
 
 # ---------------------------------------------------------------
 # İÇ SAYAÇ – cavity throttle için (modül seviyesi, thread-safe değil
@@ -84,55 +58,56 @@ _cavity_eval_counter = 0
 
 
 # ====================================================================
-# ADAPTİF AĞIRLIK SİSTEMİ
+# ADAPTİF AĞIRLIK SİSTEMİ (sadece geçerli çözümler için; ihlal = INFEASIBLE)
 # ====================================================================
 
 class AdaptiveWeights:
     """
-    Performansa göre otomatik ayarlanan fitness ağırlıkları.
-    
-    GA ilerledikçe mevcut çözüm kalitesine göre ağırlıkları
-    dinamik olarak ayarlar.
+    Sadece palet sayısı ve doluluk ağırlıkları. Ölçek: 1 fazla palet cezası > doluluk ödülü.
     """
-    
+
     def __init__(self):
-        self.w_pallet_count = 50_000   # Raised: must dominate w_volume
-        self.w_optimal_bonus = 150_000
-        self.w_volume = 500            # Lowered: secondary to pallet count
-        self.w_weight_violation = 1_000_000
+        # Öncelik 2: En az palet
+        self.w_pallet_count = 5000   # Fazla palet başına ceza
+        self.w_optimal_bonus = 15000  # Theo_min veya altı ödül
+        self.MAX_PALLET_COUNT = 8000
+
+        # Öncelik 3: Doluluk (palet cezasından küçük kal)
+        self.w_volume = 800
+        self.MAX_VOLUME = 2000
+
+        # GA'da ihlal = INFEASIBLE (kullanılmıyor). DE get_weights() ile okuyor; DE'ye dokunmuyoruz, eski değerler kalsın.
         self.w_physical_violation = 10_000_000
+        self.w_weight_violation = 1_000_000
+        self.w_stacking_penalty = 120_000
         self.w_cog_penalty = 0
-        self.w_stacking_penalty = 100_000
-        self.MAX_VOLUME = 1_000        # Cap for adapted w_volume
-        self.MAX_PALLET_COUNT = 100_000
-        
+
     def adapt(self, best_chromosome, theo_min_pallets):
-        """Performansa göre ağırlıkları ayarla."""
         if not best_chromosome:
             return
-            
         palet_sayisi = best_chromosome.palet_sayisi
         doluluk = best_chromosome.ortalama_doluluk
-        
-        # KURAL 1: Palet sayısı fazlaysa → pallet_count artır
+
+        # Palet sayısı fazlaysa palet cezasını artır (yumuşak: 1.05)
         if palet_sayisi > theo_min_pallets + 2:
-            self.w_pallet_count = min(self.w_pallet_count * 1.1, self.MAX_PALLET_COUNT)
-            print(f"  🔧 Palet sayısı yüksek → w_pallet_count artırıldı: {self.w_pallet_count:.0f}")
+            self.w_pallet_count = min(self.w_pallet_count * 1.05, self.MAX_PALLET_COUNT)
+            if palet_sayisi > theo_min_pallets + 4:
+                print(f"  Palet sayisi yuksek -> w_pallet_count: {self.w_pallet_count:.0f}")
         elif palet_sayisi <= theo_min_pallets:
-            self.w_pallet_count = max(self.w_pallet_count * 0.95, 10000)
-            
-        # KURAL 2: Doluluk düşükse → volume weight artır
-        if doluluk < 0.65:
-            self.w_volume = min(self.w_volume * 1.1, self.MAX_VOLUME)
-            print(f"  🔧 Doluluk düşük (%{doluluk*100:.1f}) → w_volume artırıldı: {self.w_volume:.0f}")
-        elif doluluk > 0.85:
-            self.w_volume = max(self.w_volume * 0.98, 15000)
-            
-        # KURAL 3: Optimal bonus'u dinamik ayarla
+            self.w_pallet_count = max(self.w_pallet_count * 0.98, 40_000)
+
+        # Doluluk düşükse volume ağırlığını artır (doluluk tırmanabilsin)
+        if doluluk < 0.58:
+            self.w_volume = min(self.w_volume * 1.12, self.MAX_VOLUME)
+        elif doluluk < 0.65:
+            self.w_volume = min(self.w_volume * 1.05, self.MAX_VOLUME)
+        elif doluluk > 0.82:
+            self.w_volume = max(self.w_volume * 0.98, 500)
+
         if palet_sayisi == theo_min_pallets:
-            self.w_optimal_bonus = min(self.w_optimal_bonus * 1.1, 300000)
+            self.w_optimal_bonus = min(self.w_optimal_bonus * 1.05, 250_000)
         else:
-            self.w_optimal_bonus = max(self.w_optimal_bonus * 0.95, 100000)
+            self.w_optimal_bonus = max(self.w_optimal_bonus * 0.98, 120_000)
     
     def to_dict(self):
         return {
@@ -237,12 +212,9 @@ def calculate_cog_penalty(pallet, pallet_length, pallet_width):
     dev_x = abs(cog_x - ideal_x) / ideal_x if ideal_x > 0 else 0
     dev_y = abs(cog_y - ideal_y) / ideal_y if ideal_y > 0 else 0
 
-    # Ceza Hesaplama
-    # 1. Yatay Denge Cezası (Merkezden uzaklaştıkça ceza artar)
-    xy_penalty = (dev_x**2 + dev_y**2) * 5000  
-    
-    # 2. Dikey Denge Cezası (Ağırlık merkezi yukarı çıktıkça ceza artar)
-    z_penalty = cog_z * 10  
+    # Ceza: oncelik 4 (sekil); palet sayisi/doluluk kararini bozmaz
+    xy_penalty = (dev_x**2 + dev_y**2) * 5000
+    z_penalty = cog_z * 15   # Dikey denge; 10->15 (dokuman onerisi)
 
     return xy_penalty + z_penalty
 
@@ -544,7 +516,75 @@ def compute_vertical_compaction_score(pallet_items):
 
 
 # ====================================================================
-# ANA FITNESS FONKSİYONU
+# DE İLE AYNI MANTIK: LEXICOGRAPHIC (PALET ÖNCELİK, SONRA DOLULUK)
+# GA bu fonksiyonu kullanırsa skorlar DE ile aynı ölçekte ve anlaşılır olur.
+# ====================================================================
+# DE'deki sabitlerle aynı (tek palet farkı her zaman doluluktan baskın)
+LEX_W_OPTIMAL   = 20_000   # P <= theo_min iken ödül
+LEX_BIG_PALLET  = 50_000   # Her fazla palet cezası
+LEX_W_UTIL      = 1_000    # Ortalama doluluk ödülü [0..1]
+
+
+def evaluate_fitness_lexicographic(chromosome, palet_cfg: PaletConfig) -> FitnessResult:
+    """
+    DE ile aynı skorlama: önce palet sayısı (teo min ödül / fazla palet cezası), sonra doluluk.
+    Taşma / ağırlık / destek ihlali = INFEASIBLE (death penalty). Ek void/COG/cavity yok.
+    GA bu fonksiyonu kullanınca skorlar DE ile karşılaştırılabilir ve sade olur.
+    """
+    # Yerleştirme sırası = sira_gen ile sıralanmış ürün listesi
+    ordered = [chromosome.urunler[i] for i in chromosome.sira_gen]
+    pallets = pack_maximal_rectangles_first_fit(ordered, palet_cfg, debug_support=DEBUG_SUPPORT)
+
+    if not pallets:
+        chromosome.fitness = -1e9
+        return FitnessResult(-1e9, 0, 0.0)
+
+    P_GA = len(pallets)
+    total_load_vol = sum(urun_hacmi(u) for u in chromosome.urunler)
+    theo_min = max(1, math.ceil(total_load_vol / palet_cfg.volume))
+
+    total_item_vol = sum(
+        sum(i["L"] * i["W"] * i["H"] for i in p["items"]) for p in pallets
+    )
+    avg_doluluk = (total_item_vol / (P_GA * palet_cfg.volume)) if P_GA > 0 else 0.0
+
+    # YASAK: taşma / ağırlık / destek
+    for pallet in pallets:
+        for item in pallet["items"]:
+            if (item["x"] + item["L"] > palet_cfg.length or
+                item["y"] + item["W"] > palet_cfg.width or
+                item["z"] + item["H"] > palet_cfg.height):
+                chromosome.fitness = INFEASIBLE
+                chromosome.palet_sayisi = P_GA
+                chromosome.ortalama_doluluk = avg_doluluk
+                return FitnessResult(INFEASIBLE, P_GA, avg_doluluk)
+        if pallet["weight"] > palet_cfg.max_weight:
+            chromosome.fitness = INFEASIBLE
+            chromosome.palet_sayisi = P_GA
+            chromosome.ortalama_doluluk = avg_doluluk
+            return FitnessResult(INFEASIBLE, P_GA, avg_doluluk)
+        if check_stacking_violations(pallet["items"]) > 0:
+            chromosome.fitness = INFEASIBLE
+            chromosome.palet_sayisi = P_GA
+            chromosome.ortalama_doluluk = avg_doluluk
+            return FitnessResult(INFEASIBLE, P_GA, avg_doluluk)
+
+    # GEÇERLİ: DE ile aynı formül
+    fitness_score = 0.0
+    if P_GA <= theo_min:
+        fitness_score += LEX_W_OPTIMAL
+    else:
+        fitness_score -= LEX_BIG_PALLET * (P_GA - theo_min)
+    fitness_score += LEX_W_UTIL * avg_doluluk
+
+    chromosome.fitness = fitness_score
+    chromosome.palet_sayisi = P_GA
+    chromosome.ortalama_doluluk = avg_doluluk
+    return FitnessResult(fitness_score, P_GA, avg_doluluk)
+
+
+# ====================================================================
+# ANA FITNESS FONKSİYONU (Eski: çok terimli, adaptif ağırlıklar)
 # ====================================================================
 
 def evaluate_fitness(chromosome, palet_cfg: PaletConfig) -> FitnessResult:
@@ -576,16 +616,39 @@ def evaluate_fitness(chromosome, palet_cfg: PaletConfig) -> FitnessResult:
     total_load_vol = sum(urun_hacmi(u) for u in chromosome.urunler)
     theo_min = max(1, math.ceil(total_load_vol / palet_cfg.volume))
     
-    # 3. FITNESS HESAPLAMA
-    fitness_score = 0.0
+    # 3. YASAK KONTROLÜ: Taşma / ağırlık / destek ihlali varsa çözüm geçersiz (ceza değil)
     total_fill_ratio = 0.0
-    has_violation = False
+    for p in pallets:
+        total_fill_ratio += sum(i["L"] * i["W"] * i["H"] for i in p["items"]) / palet_cfg.volume
+    avg_doluluk_pre = total_fill_ratio / P_GA if P_GA > 0 else 0.0
+    for pallet in pallets:
+        for item in pallet["items"]:
+            if (item["x"] + item["L"] > palet_cfg.length or
+                item["y"] + item["W"] > palet_cfg.width or
+                item["z"] + item["H"] > palet_cfg.height):
+                chromosome.fitness = INFEASIBLE
+                chromosome.palet_sayisi = P_GA
+                chromosome.ortalama_doluluk = avg_doluluk_pre
+                return FitnessResult(INFEASIBLE, P_GA, avg_doluluk_pre)
+        if pallet["weight"] > palet_cfg.max_weight:
+            chromosome.fitness = INFEASIBLE
+            chromosome.palet_sayisi = P_GA
+            chromosome.ortalama_doluluk = avg_doluluk_pre
+            return FitnessResult(INFEASIBLE, P_GA, avg_doluluk_pre)
+        if check_stacking_violations(pallet["items"]) > 0:
+            chromosome.fitness = INFEASIBLE
+            chromosome.palet_sayisi = P_GA
+            chromosome.ortalama_doluluk = avg_doluluk_pre
+            return FitnessResult(INFEASIBLE, P_GA, avg_doluluk_pre)
 
-    # Cavity throttle: her CAVITY_THROTTLE bireyde bir hesap yap
+    # 4. GEÇERLİ ÇÖZÜM: Fitness hesapla (palet sayısı + doluluk + şekil)
+    fitness_score = 0.0
+    total_fill_ratio = 0.0  # yeniden dolduracağız
+
     _cavity_eval_counter += 1
     run_cavity = (_cavity_eval_counter % CAVITY_THROTTLE == 0)
     
-    # --- ÖNCELİK 1: PALET SAYISI ---
+    # --- ÖNCELİK 2: PALET SAYISI ---
     if P_GA == theo_min:
         fitness_score += weights["w_optimal_bonus"]
     elif P_GA < theo_min:
@@ -641,27 +704,11 @@ def evaluate_fitness(chromosome, palet_cfg: PaletConfig) -> FitnessResult:
     #             variance, W_VARIANCE * variance,
     #         )
 
-        # --- KIRMIZI ÇİZGİ: FİZİKSEL KISIT İHLALLERİ ---
+    # --- ŞEKİL (COG, void, edge, cavity; ihlal zaten yukarıda yasaklandı) ---
     for pallet in pallets:
-        if pallet["weight"] > palet_cfg.max_weight:
-            fitness_score -= weights["w_weight_violation"]
-            has_violation = True
-        
-        for item in pallet["items"]:
-            if (item["x"] + item["L"] > palet_cfg.length or 
-                item["y"] + item["W"] > palet_cfg.width or 
-                item["z"] + item["H"] > palet_cfg.height):
-                fitness_score -= weights["w_physical_violation"]
-                has_violation = True
-        
-        # Ağırlık Merkezi (Center of Gravity) Cezası
+        # Ağırlık Merkezi (COG) cezası
         cog_penalty = calculate_cog_penalty(pallet, palet_cfg.length, palet_cfg.width)
         fitness_score -= cog_penalty
-        
-        stacking_violations = check_stacking_violations(pallet["items"])
-        if stacking_violations > 0:
-            fitness_score -= weights["w_stacking_penalty"] * stacking_violations
-            has_violation = True
 
         items = pallet["items"]
 

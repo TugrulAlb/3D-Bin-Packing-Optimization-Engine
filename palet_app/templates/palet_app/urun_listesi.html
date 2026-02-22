@@ -173,6 +173,23 @@
             </label>
         </div>
         
+        <!-- GA Modu (sadece Genetik seçiliyken görünür) -->
+        <div id="gaModeGroup" class="mb-4 hidden">
+            <p class="text-sm font-semibold text-gray-700 mb-2">GA modu:</p>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" class="ga-mode-btn px-4 py-2 rounded-lg border-2 transition-all font-medium text-sm" data-ga-mode="fast">
+                    <i class="fas fa-bolt text-amber-500 mr-1"></i> Hızlı
+                </button>
+                <button type="button" class="ga-mode-btn px-4 py-2 rounded-lg border-2 transition-all font-medium text-sm bg-blue-100 border-blue-400 text-blue-800" data-ga-mode="balanced">
+                    <i class="fas fa-balance-scale text-blue-600 mr-1"></i> Dengeli
+                </button>
+                <button type="button" class="ga-mode-btn px-4 py-2 rounded-lg border-2 border-gray-300 transition-all font-medium text-sm text-gray-700 hover:border-gray-400" data-ga-mode="quality">
+                    <i class="fas fa-gem text-indigo-500 mr-1"></i> Kaliteli
+                </button>
+            </div>
+            <p id="gaModeHint" class="text-xs text-gray-500 mt-1">Dengeli: orta süre, iyi sonuç. Hızlı: daha kısa süre. Kaliteli: daha uzun süre, en iyi sonuç.</p>
+        </div>
+        
         <!-- Açıklama Metni -->
         <div id="algorithmDescription" class="bg-gray-50 border-l-4 border-blue-500 p-4 mb-4 rounded">
             <p class="text-sm text-gray-700">
@@ -199,17 +216,22 @@
 $(document).ready(function() {
     let isProcessing = false;
     
+    if ($('input[name="algoritma"]:checked').val() === 'genetic') {
+        $('#gaModeGroup').removeClass('hidden');
+    }
+    
     // Algoritma seçimi değiştiğinde açıklamayı güncelle
     $('input[name="algoritma"]').on('change', function() {
         const algoritma = $(this).val();
         const descriptionDiv = $('#algorithmDescription');
         
         if (algoritma === 'genetic') {
+            $('#gaModeGroup').removeClass('hidden');
             descriptionDiv.html(`
                 <p class="text-sm text-gray-700">
                     <i class="fas fa-info-circle text-blue-500 mr-2"></i>
                     <strong>Genetik Algoritma</strong> hızlı ve güvenilir sonuçlar için önerilir. 
-                    Çoğu durumda en iyi seçimdir.
+                    Mod: Hızlı (kısa süre), Dengeli (önerilen), Kaliteli (en iyi sonuç, daha uzun).
                 </p>
             `).removeClass('border-purple-500').addClass('border-blue-500');
             
@@ -220,6 +242,7 @@ $(document).ready(function() {
                     .addClass('from-blue-600 to-purple-600');
             }
         } else if (algoritma === 'differential_evolution') {
+            $('#gaModeGroup').addClass('hidden');
             descriptionDiv.html(`
                 <p class="text-sm text-gray-700">
                     <i class="fas fa-info-circle text-purple-500 mr-2"></i>
@@ -237,19 +260,32 @@ $(document).ready(function() {
         }
     });
     
+    // GA mod butonları: seçili modu işaretle
+    $('.ga-mode-btn').on('click', function() {
+        $('.ga-mode-btn').removeClass('bg-blue-100 border-blue-400 text-blue-800').addClass('border-gray-300 text-gray-700');
+        $(this).removeClass('border-gray-300 text-gray-700').addClass('bg-blue-100 border-blue-400 text-blue-800');
+        const mode = $(this).data('ga-mode');
+        const hints = { fast: 'Hızlı: ~30-60 sn, makul sonuç.', balanced: 'Dengeli: ~1-2 dk, iyi sonuç.', quality: 'Kaliteli: ~2-4 dk, en iyi sonuç.' };
+        $('#gaModeHint').text(hints[mode] || '');
+    });
+    
     $('#startOptimizationBtn').on('click', function(e) {
         e.preventDefault();
         if (isProcessing) return false;
         isProcessing = true;
         
         const selectedAlgorithm = $('input[name="algoritma"]:checked').val();
+        const gaMode = selectedAlgorithm === 'genetic' ? ($('.ga-mode-btn.bg-blue-100').data('ga-mode') || 'balanced') : null;
         const algorithmName = selectedAlgorithm === 'genetic' ? 'Genetik Algoritma' : 'Differential Evolution';
         const algorithmIcon = selectedAlgorithm === 'genetic' ? '🧬' : '⚛️';
+        
+        const payload = { algoritma: selectedAlgorithm };
+        if (gaMode) payload.ga_mode = gaMode;
         
         $.ajax({
             url: '{% url "palet_app:start_placement" %}',
             type: 'POST',
-            data: JSON.stringify({ algoritma: selectedAlgorithm }),
+            data: JSON.stringify(payload),
             contentType: 'application/json',
             headers: { 'X-CSRFToken': '{{ csrf_token }}' },
             beforeSend: function() {

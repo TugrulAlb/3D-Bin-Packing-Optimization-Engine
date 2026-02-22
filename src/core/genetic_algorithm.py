@@ -16,11 +16,12 @@ Referanslar:
     - Goldberg, D. "Genetic Algorithms in Search, Optimization" (1989)
 """
 
+import math
 import random
 from typing import List
 
 from .chromosome import Chromosome
-from .fitness import evaluate_fitness, adapt_weights, get_weights
+from .fitness import evaluate_fitness_lexicographic
 from ..utils.helpers import urun_hacmi
 from ..models.container import PaletConfig
 
@@ -182,7 +183,7 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
         generations = 100
         mutation_rate = 0.4
         tournament_k = 2
-        print(f"⚡ LIGHT & FAST MODE (Auto-Orientation): n_urun={n_urun} > 100")
+        print(f"LIGHT & FAST MODE (Auto-Orientation): n_urun={n_urun} > 100")
         print(f"   Parameters: pop=50, gen=100, mut=0.4, tournament_k=2")
     else:
         if population_size is None:
@@ -200,7 +201,7 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
     elitism         = min(elitism, population_size - 1)
     # ─────────────────────────────────────────────────────────────────────
 
-    print(f"🧬 GA Parametreler:")
+    print(f"GA Parametreler:")
     print(f"   Ürün Sayısı: {n_urun}")
     print(f"   Population: {population_size}")
     print(f"   Generations: {generations}")
@@ -208,28 +209,32 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
     print(f"   Mutation Rate: {mutation_rate}")
     print(f"   Tournament K: {tournament_k}")
 
-    # Teorik minimum palet sayısı
+    # Teorik minimum palet sayısı (fitness ile aynı formül: ceil)
     total_load_vol = sum(urun_hacmi(u) for u in urunler)
-    theo_min_pallets = max(1, int(total_load_vol / palet_cfg.volume) + 1)
-    
-    # HEIGHT-AWARE INITIAL POPULATION
+    theo_min_pallets = max(1, math.ceil(total_load_vol / palet_cfg.volume))
+
+    # Cesitli baslangic nufusu: height, block, random
     population: List[Chromosome] = []
-    
-    num_height_seeds = max(1, int(population_size * 0.40))
-    print(f"📏 Creating {num_height_seeds} HEIGHT-sorted seeds (anti-staircase effect)...")
-    for _ in range(num_height_seeds):
+    num_height = max(1, int(population_size * 0.35))
+    num_block = max(0, int(population_size * 0.15))
+    num_random = population_size - num_height - num_block
+
+    print(f"Creating {num_height} HEIGHT-sorted seeds (anti-staircase)...")
+    for _ in range(num_height):
         population.append(create_height_sorted_chromosome(urunler))
-    
-    num_random = population_size - len(population)
-    print(f"🎲 Creating {num_random} RANDOM individuals for AI discovery...")
+    if num_block > 0:
+        print(f"Creating {num_block} BLOCK-sorted seeds (same-size groups)...")
+        for _ in range(num_block):
+            population.append(create_block_sorted_chromosome(urunler))
+    print(f"Creating {num_random} RANDOM individuals for exploration...")
     for _ in range(num_random):
         population.append(Chromosome(urunler=urunler))
-    
-    print(f"✅ Total population: {len(population)} (Height: {num_height_seeds}, Random: {num_random})")
+
+    print(f"Total population: {len(population)} (Height: {num_height}, Block: {num_block}, Random: {num_random})")
 
     # İlk fitness hesaplaması
     for c in population:
-        evaluate_fitness(c, palet_cfg)
+        evaluate_fitness_lexicographic(c, palet_cfg)
 
     history = []
     
@@ -241,12 +246,12 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
         population.sort(key=lambda c: c.fitness, reverse=True)
         current_best = population[0]
         
-        # LOCAL SEARCH (Hill Climbing)
+        # LOCAL SEARCH (Hill Climbing) — daha fazla deneme
         if gen % 5 == 0:
             original_fitness = current_best.fitness
             best_local = current_best.copy()
-            
-            for _ in range(10):
+
+            for _ in range(15):
                 candidate = current_best.copy()
                 
                 if random.random() < 0.7:
@@ -265,7 +270,7 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
                     j = random.randint(0, candidate.n - 1)
                     candidate.sira_gen[i], candidate.sira_gen[j] = candidate.sira_gen[j], candidate.sira_gen[i]
                 
-                evaluate_fitness(candidate, palet_cfg)
+                evaluate_fitness_lexicographic(candidate, palet_cfg)
                 
                 if candidate.fitness > best_local.fitness:
                     best_local = candidate.copy()
@@ -273,7 +278,7 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
             if best_local.fitness > original_fitness:
                 population[0] = best_local
                 current_best = best_local
-                print(f"  🔍 Height-Aware Local Search improved: {original_fitness:.2f} → {best_local.fitness:.2f}")
+                print(f"  Height-Aware Local Search improved: {original_fitness:.2f} -> {best_local.fitness:.2f}")
         
         # ANTI-STAGNATION
         if current_best.fitness > best_fitness_tracker:
@@ -282,34 +287,35 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
         else:
             generations_without_improvement += 1
         
-        # GENETİK ŞOK
-        if generations_without_improvement >= 20 and gen < generations - 5:
-            print(f"  💥 GENETİK ŞOK! {generations_without_improvement} nesil iyileşme yok")
-            num_to_replace = int(population_size * 0.5)
-            half = num_to_replace // 2
-            
+        # GENETİK ŞOK: hem rastgele hem heuristik tohumlarla cesitlilik
+        if generations_without_improvement >= 15 and gen < generations - 5:
+            print(f"  GENETIK SOK: {generations_without_improvement} nesil iyilesme yok")
+            num_to_replace = int(population_size * 0.55)
+            n_vol = num_to_replace // 3
+            n_wgt = num_to_replace // 3
+            n_rand = num_to_replace - n_vol - n_wgt
             idx = elitism
-            
-            for _ in range(half):
+
+            for _ in range(n_vol):
                 if idx < len(population):
                     population[idx] = create_seeded_chromosome(urunler, seed_type='volume')
-                    evaluate_fitness(population[idx], palet_cfg)
+                    evaluate_fitness_lexicographic(population[idx], palet_cfg)
                     idx += 1
-            
-            remaining = num_to_replace - half
-            for _ in range(remaining):
+            for _ in range(n_wgt):
                 if idx < len(population):
                     population[idx] = create_seeded_chromosome(urunler, seed_type='weight')
-                    evaluate_fitness(population[idx], palet_cfg)
+                    evaluate_fitness_lexicographic(population[idx], palet_cfg)
                     idx += 1
-            
-            print(f"  ✅ {num_to_replace} sıralı tohum eklendi ({half} hacim, {remaining} ağırlık)")
+            for _ in range(n_rand):
+                if idx < len(population):
+                    population[idx] = Chromosome(urunler=urunler)
+                    evaluate_fitness_lexicographic(population[idx], palet_cfg)
+                    idx += 1
+
+            print(f"  {num_to_replace} birey yenilendi (hacim: {n_vol}, agirlik: {n_wgt}, rastgele: {n_rand})")
             generations_without_improvement = 0
         
-        # ADAPTIVE WEIGHTS
-        if gen % 5 == 0 and gen > 0:
-            adapt_weights(current_best, theo_min_pallets)
-        
+        # Skor DE ile aynı mantık (lexicographic); adaptif ağırlık yok
         avg_fitness = sum(c.fitness for c in population) / len(population)
         
         history.append({
@@ -337,7 +343,7 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
             child = crossover(parent1, parent2)
             mutate(child, mutation_rate=mutation_rate)
 
-            evaluate_fitness(child, palet_cfg)
+            evaluate_fitness_lexicographic(child, palet_cfg)
             new_population.append(child)
 
         population = new_population
