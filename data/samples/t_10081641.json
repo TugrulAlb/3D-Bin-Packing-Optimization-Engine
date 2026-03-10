@@ -1,0 +1,99 @@
+{
+  "id": 10081641,
+  "container": {
+    "length": 120,
+    "width": 100,
+    "height": 180,
+    "weight": 1250
+  },
+  "details": [
+    {
+      "product": {
+        "id": 99650,
+        "code": "RB243446",
+        "package_length": 40,
+        "package_width": 40,
+        "package_height": 40,
+        "package_weight": 6.792,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 10,
+        "unit_weight": 0.283,
+        "units_per_layer": null
+      },
+      "package_quantity": 108,
+      "package_id": "CS",
+      "quantity": 2592.000,
+      "unit_id": "PC"
+    },
+    {
+      "product": {
+        "id": 106722,
+        "code": "RB243534",
+        "package_length": 30,
+        "package_width": 30,
+        "package_height": 30,
+        "package_weight": 6.744,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": null,
+        "unit_length": 10,
+        "unit_width": 10,
+        "unit_height": 10,
+        "unit_weight": 0.281,
+        "units_per_layer": null
+      },
+      "package_quantity": 108,
+      "package_id": "CS",
+      "quantity": 2592.000,
+      "unit_id": "PC"
+    },
+    {
+      "product": {
+        "id": 106726,
+        "code": "RB248787",
+        "package_length": 40,
+        "package_width": 40,
+        "package_height": 40,
+        "package_weight": 6.720,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 10,
+        "unit_weight": 0.280,
+        "units_per_layer": null
+      },
+      "package_quantity": 24,
+      "package_id": "CS",
+      "quantity": 576.000,
+      "unit_id": "PC"
+    },
+    {
+      "product": {
+        "id": 99043,
+        "code": "RB248800",
+        "package_length": 10,
+        "package_width": 10,
+        "package_height": 10,
+        "package_weight": 6.720,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": 12,
+        "unit_length": 5,
+        "unit_width": 5,
+        "unit_height": 5,
+        "unit_weight": 0.280,
+        "units_per_layer": null
+      },
+      "package_quantity": 108,
+      "package_id": "CS",
+      "quantity": 2592.000,
+      "unit_id": "PC"
+    }
+  ]
+}

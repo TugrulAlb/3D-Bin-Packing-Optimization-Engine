@@ -1,0 +1,209 @@
+{
+  "id": 10081847,
+  "container": {
+    "length": 120,
+    "width": 100,
+    "height": 180,
+    "weight": 1250
+  },
+  "details": [
+    {
+      "product": {
+        "id": 99043,
+        "code": "RB248800",
+        "package_length": 10,
+        "package_width": 10,
+        "package_height": 10,
+        "package_weight": 6.720,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": 12,
+        "unit_length": 5,
+        "unit_width": 5,
+        "unit_height": 5,
+        "unit_weight": 0.280,
+        "units_per_layer": null
+      },
+      "package_quantity": 48,
+      "package_id": "CS",
+      "quantity": 1152.000,
+      "unit_id": "PC"
+    },
+    {
+      "product": {
+        "id": 169091,
+        "code": "RB248186",
+        "package_length": 40,
+        "package_width": 40,
+        "package_height": 40,
+        "package_weight": 6.864,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 10,
+        "unit_weight": 0.286,
+        "units_per_layer": null
+      },
+      "package_quantity": 48,
+      "package_id": "CS",
+      "quantity": 1152.000,
+      "unit_id": "PC"
+    },
+    {
+      "product": {
+        "id": 41442,
+        "code": "RB243533",
+        "package_length": 30,
+        "package_width": 30,
+        "package_height": 30,
+        "package_weight": 6.480,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": null,
+        "unit_length": 10,
+        "unit_width": 10,
+        "unit_height": 10,
+        "unit_weight": 0.270,
+        "units_per_layer": null
+      },
+      "package_quantity": 108,
+      "package_id": "CS",
+      "quantity": 2592.000,
+      "unit_id": "PC"
+    },
+    {
+      "product": {
+        "id": 106729,
+        "code": "RB243531",
+        "package_length": 40,
+        "package_width": 40,
+        "package_height": 40,
+        "package_weight": 9.504,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 10,
+        "unit_weight": 0.396,
+        "units_per_layer": null
+      },
+      "package_quantity": 176,
+      "package_id": "CS",
+      "quantity": 4224.000,
+      "unit_id": "PC"
+    },
+    {
+      "product": {
+        "id": 106722,
+        "code": "RB243534",
+        "package_length": 30,
+        "package_width": 30,
+        "package_height": 30,
+        "package_weight": 6.744,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": null,
+        "unit_length": 10,
+        "unit_width": 10,
+        "unit_height": 10,
+        "unit_weight": 0.281,
+        "units_per_layer": null
+      },
+      "package_quantity": 48,
+      "package_id": "CS",
+      "quantity": 1152.000,
+      "unit_id": "PC"
+    },
+    {
+      "product": {
+        "id": 106726,
+        "code": "RB248787",
+        "package_length": 40,
+        "package_width": 40,
+        "package_height": 40,
+        "package_weight": 6.720,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 10,
+        "unit_weight": 0.280,
+        "units_per_layer": null
+      },
+      "package_quantity": 48,
+      "package_id": "CS",
+      "quantity": 1152.000,
+      "unit_id": "PC"
+    },
+    {
+      "product": {
+        "id": 41362,
+        "code": "RB243532",
+        "package_length": 30,
+        "package_width": 30,
+        "package_height": 30,
+        "package_weight": 6.624,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": null,
+        "unit_length": 10,
+        "unit_width": 10,
+        "unit_height": 10,
+        "unit_weight": 0.276,
+        "units_per_layer": null
+      },
+      "package_quantity": 24,
+      "package_id": "CS",
+      "quantity": 576.000,
+      "unit_id": "PC"
+    },
+    {
+      "product": {
+        "id": 106721,
+        "code": "RB243528",
+        "package_length": 40,
+        "package_width": 40,
+        "package_height": 40,
+        "package_weight": 6.720,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 10,
+        "unit_weight": 0.280,
+        "units_per_layer": null
+      },
+      "package_quantity": 24,
+      "package_id": "CS",
+      "quantity": 576.000,
+      "unit_id": "PC"
+    },
+    {
+      "product": {
+        "id": 169090,
+        "code": "RB248185",
+        "package_length": 40,
+        "package_width": 40,
+        "package_height": 40,
+        "package_weight": 6.840,
+        "package_in_unit": 24.000,
+        "package_max_stack_weight": null,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 10,
+        "unit_weight": 0.285,
+        "units_per_layer": null
+      },
+      "package_quantity": 12,
+      "package_id": "CS",
+      "quantity": 288.000,
+      "unit_id": "PC"
+    }
+  ]
+}
