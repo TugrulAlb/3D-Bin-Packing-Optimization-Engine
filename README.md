@@ -1,59 +1,159 @@
-# 3D Bin Packing Optimization Engine
+# Akıllı Palet Yerleştirme Sistemi (3D Bin Packing Optimization Engine)
 
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)](https://www.python.org/)
 [![Django 4.2.7](https://img.shields.io/badge/Django-4.2.7-darkgreen)](https://www.djangoproject.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## 🧭 User Workflow
+
+### 1. Upload Product Data
+![Upload](img/1.png)
+
+### 2. Review Products & Select Algorithm
+![Selection](img/2.png)
+
+### 3. Optimization Process
+![Processing](img/3.png)
+
+### 4. Optimization Results
+![Summary](img/4.png)
+
+### 5. Pallet Breakdown
+![Pallets](img/5.png)
+
+### 6. 3D Visualization
+![3D](img/6.png)
+
+## 🔬 Benchmark Comparison
+
+![Benchmark](img/benchmark.png)
+
 ## 📋 About the Project
 
-**3D Bin Packing Optimization Engine** is a professional optimization solution developed to solve the NP-Hard 3D bin packing problem using **Genetic Algorithm (GA)** approach.
+**3D Bin Packing Optimization Engine** is a professional, hybrid optimization solution for solving the NP-Hard 3D bin packing problem using a pipeline of specialized algorithms.
 
-Core objectives of the project:
+The system operates through a **two-stage optimization pipeline**:
+
+1. **Stage 1: Single Pallet Pre-pass**
+   - Identifies high-efficiency groups of identical products
+   - Creates single-product pallets with maximum utilization
+   - Reduces items remaining for mixed optimization
+
+2. **Stage 2: Mix Pool Optimization**
+   - Handles remaining, mixed-product inventory
+   - Supports three different optimization approaches:
+     - **Greedy (Baseline)**: Deterministic, ultra-fast heuristic
+     - **Genetic Algorithm (GA)**: Population-based evolutionary approach
+     - **Differential Evolution (DE)**: Advanced hybrid mutation with adaptive strategies
+
+**Core objectives:**
 - ✅ Place products in containers optimally
 - ✅ Minimize empty space (maximize container utilization)
-- ✅ Ensure weight balance
-- ✅ Consider physical constraints and rotation rules
-- ✅ Provide web-based interactive interface
+- ✅ Ensure weight balance and structural stability
+- ✅ Enforce realistic warehouse constraints (rotation, weight limits, stacking rules)
+- ✅ Provide web-based interactive analysis interface
 
 ## 🎯 Key Features
 
-### Algorithm Engine
-- **Genetic Algorithm (GA)**: Population-based evolutionary optimization
-- **Fitness Function**: Container utilization rate + weight distribution
-- **Maximal Rectangles Packing**: Guillotine-based 2D/3D placement
-- **Single Pallet Algorithm**: Grid-based placement validation
-- **Mixed Product Optimization**: Intelligent product grouping
+- **Hybrid Optimization Pipeline**: Two-stage processing (single + mixed pallets)
+- **Multiple Algorithms**: Greedy (fast baseline), GA (metaheuristic), DE (adaptive metaheuristic)
+- **Realistic Packing Constraints**: Void penalties, layer snapping, edge bias, cavity detection
+- **Single + Mixed Pallet Strategy**: Optimized separation of high-efficiency groups
+- **Web Interface (Django)**: Product/container management, 3D visualizations, results analysis
+- **Benchmark Comparison Tool (Streamlit)**: Compare GA, DE, and Greedy on same input
+- **Flexible Algorithm Selection**: Choose best-fit method for your requirements
 
-### Web Interface (Django)
-- 📁 Product and container management
-- 🎨 3D visualization (Matplotlib + Plotly)
-- 📊 Optimization results and analysis reports
-- 💾 Historical tracking of optimized operations
-- 🔄 JSON data import/export
+## 🚀 Optimization Pipeline
 
-## 📦 Realistic Packing (Amazon-like)
+### Result Dashboard Example
 
-Gerçek depo istifine benzer kompakt, katmanlı ve stabil yerleşimler için
-dört ek mekanizma etkinleştirilmiştir:
+![Result Dashboard Example](img/5.png)
 
-| Mekanizma | Dosya | Ne yapar? |
-|---|---|---|
-| **Void Penalty** | `src/core/fitness.py` | Bounding-box hacmi ile gerçek kutu hacmi farkını ölçer; büyük iç boşluklar (U şekli, oyuklar) ceza alır. |
-| **Layer Snapping** | `src/core/packing.py` | Kutu z koordinatı, mevcut katman yüzeylerine (layer_map) veya Z_GRID=5 cm ızgarasına yuvarlanır. Raf gibi temiz katman görünümü sağlar. |
-| **Edge Bias** | `src/core/fitness.py` | Ürünler duvarlara ne kadar yakınsa o kadar ödüllendirilir; kenar boşlukları azalır. |
-| **Cavity Penalty** | `src/core/fitness.py` | XY ayak izindeki kapalı iç boşluklar (baca kolonları) flood-fill ile tespit edilir ve cezalandırılır. N=4 throttle ile performans korunur. |
+### 3D Pallet Visualization
 
-### Parametreler (`src/core/fitness.py` başı)
+![3D Pallet Visualization](img/6.png)
 
-```python
-W_VOID        = 0.8    # Void ceza ağırlığı        [0.6 – 1.2]
-W_EDGE        = 0.15   # Kenar ödül ağırlığı       [0.1 – 0.3]
-W_CAVITY      = 0.35   # Cavity ceza ağırlığı      [0.2 – 0.6]
-CAVITY_GRID   = 5.0    # Cavity grid adımı (cm)
-CAVITY_THROTTLE = 4    # Her N bireyde cavity hesapla
-```
+The optimization workflow processes items through a structured pipeline:
 
-`Z_GRID` (katman snap adımı cm) için `src/core/packing.py` dosyasının başına bakın.
+1. **JSON Input Parsing**
+  - Load `container` and `details[*].product` structure from JSON files
+  - Validate constraints (dimensions, weights, rotation rules)
+
+2. **Single Pallet Optimization (High-Efficiency Groups)**
+   - Identify products with identical dimensions and weight
+   - Create dedicated single-product pallets with maximum utilization
+   - Use grid-based placement for stack stability
+
+3. **Remaining Items → Mix Pool**
+   - Collect unoptimized or low-quantity items
+   - Prepare for multi-algorithm comparison
+
+4. **Mix Optimization (Multiple Approaches)**
+   - **Greedy First-Fit**: Fast baseline, deterministic
+  - **Genetic Algorithm (GA)**: Good balance between runtime and solution quality
+  - **Differential Evolution (DE)**: Strong exploration, often slower
+
+5. **Final Pallet Set**
+   - Combine single-product pallets + mixed optimization results
+   - Merge and repack if necessary
+   - Output unified pallet configuration
+
+## 🧬 Algorithms
+
+### Greedy / First-Fit (Maximal Rectangles)
+
+- **Approach**: Deterministic space partitioning
+- **Speed**: Very fast
+- **Use Case**: Baseline solution for quick estimates
+- **Trade-off**: May sacrifice solution quality on some datasets for speed
+- **Implementation**: Guillotine-style rectangular space management
+
+### Genetic Algorithm (GA)
+
+- **Approach**: Population-based evolutionary optimization
+- **Operators**: Crossover, mutation, elitism
+- **Speed**: Moderate (generations × population size evaluations)
+- **Use Case**: Good balance between runtime and solution quality
+- **Parameters**:
+  - Population size: Dynamically scaled based on problem size
+  - Generations: Configurable (default benchmark profile: ~50-100)
+  - Mutation & crossover rates: Adaptive tuning per benchmark run
+- **Note**: Exact runtime settings may vary depending on benchmark/profile and problem size.
+- **Fitness**: Utilization score + weight balance - constraint penalties
+
+### Differential Evolution (DE)
+
+- **Approach**: Continuous optimization adapted for packing
+- **Mutation**: Hybrid strategies with adaptive F and CR
+- **Speed**: Slower but with strong exploration capability
+- **Use Case**: Can provide high-quality solutions depending on dataset and convergence
+- **Parameters**:
+  - Population: User-configurable base (e.g., 40), internally scaled by adaptive minimum max(60, 0.8 × N)
+  - Generations: Configurable (benchmark default: ~60)
+  - F (mutation amplitude): Adaptive (0.4–0.9)
+  - CR (crossover rate): 0.9
+- **Note**: Exact runtime settings may vary depending on benchmark/profile and problem size.
+- **Advantages**: Good exploration characteristics, adaptive parameter tuning
+
+## 🔬 Benchmark Tool
+
+A **Streamlit-based benchmark interface** enables side-by-side algorithm comparison:
+
+**Functionality:**
+- Load same JSON input into all three algorithms
+- Run GA, DE, and Greedy simultaneously
+- Compare metrics in real-time
+
+**Metrics Compared:**
+- **Runtime**: Execution time per algorithm (seconds)
+- **Pallet Count**: Total containers used
+- **Utilization**: Average fill percentage
+- **Single/Mix Breakdown**: Pallets from each stage
+
+**Pipeline Behavior:**
+- All three algorithms process same single + mix pipeline
+- Results reflect complete optimization (not just mix pool)
+- Direct comparison of speed vs. solution quality trade-offs
 
 ## 🏗️ Project Structure
 
@@ -98,6 +198,29 @@ CAVITY_THROTTLE = 4    # Her N bireyde cavity hesapla
 ├── requirements.txt               # Python dependencies
 └── README.md                      # This file
 ```
+
+## 📦 Realistic Packing Constraints
+
+To achieve warehouse-like compact, layered, and stable arrangements, the system employs four key mechanisms:
+
+| Mechanism | File | Purpose |
+|-----------|------|---------|
+| **Void Penalty** | `src/core/fitness.py` | Measures difference between bounding box volume and actual item volume; penalizes large internal cavities (U-shapes, air pockets) |
+| **Layer Snapping** | `src/core/packing.py` | Aligns item Z-coordinate to layer surfaces or a Z_GRID (5 cm). Creates clean shelf-like appearance |
+| **Edge Bias** | `src/core/fitness.py` | Rewards items placed closer to walls; reduces edge spacing |
+| **Cavity Penalty** | `src/core/fitness.py` | Detects closed internal air gaps in XY footprint via flood-fill; penalizes them. Throttled (N=4) for performance |
+
+**Key Parameters** (`src/core/fitness.py`):
+
+```python
+W_VOID        = 0.8    # Void penalty weight         [0.6 – 1.2]
+W_EDGE        = 0.15   # Edge reward weight          [0.1 – 0.3]
+W_CAVITY      = 0.35   # Cavity penalty weight      [0.2 – 0.6]
+CAVITY_GRID   = 5.0    # Cavity grid step (cm)
+CAVITY_THROTTLE = 4    # Compute cavity every N individuals
+```
+
+See `src/core/packing.py` start for `Z_GRID` (layer snapping step in cm).
 
 ## 🚀 Installation & Running
 
@@ -188,104 +311,136 @@ The application supports the following environment variables (see `.env.example`
 
 **Security Note**: Never commit `.env` with real secrets to version control!
 
-### Running Optimization Algorithms
+## 📊 Running Optimization Algorithms
 
-**Genetic Algorithm (GA)**:
+### Command Line (GA)
+
 ```bash
 python main.py data/samples/0110.json
 ```
 
-**Differential Evolution (DE)**:
+### Python API (DE Example)
+
 ```python
 from src.core.optimizer_de import run_de
 from src.models.container import PaletConfig
 
-# Configure and run
-palet_cfg = PaletConfig(length=120, width=100, height=150, max_weight=1000)
+# Configure container
+palet_cfg = PaletConfig(
+  length=120, width=100, height=180,
+  max_weight=1250
+)
+
+# Run DE optimization
 best_solution, history = run_de(
     urunler=products,
     palet_cfg=palet_cfg,
-    population_size=80,  # Auto: max(60, 0.8*N)
+    population_size=80,
     generations=50,
     use_rotations=False
 )
+
+# best_solution typically exposes fields like:
+# best_solution.palet_sayisi, best_solution.ortalama_doluluk, best_solution.fitness
 ```
 
-### Testing
+### Algorithm Comparison
 
-Run optimization tests:
+```python
+from src.core.genetic_algorithm import run_ga
+from src.core.optimizer_de import run_de
+from src.core.packing_first_fit import pack_maximal_rectangles_first_fit
+
+# Run all three algorithms
+ga_best, ga_history = run_ga(urunler=urunler, palet_cfg=palet_cfg)
+de_best, de_history = run_de(urunler=urunler, palet_cfg=palet_cfg)
+greedy_pallets = pack_maximal_rectangles_first_fit(urunler=urunler, palet_cfg=palet_cfg)
+
+# Safe, structure-aware access (object fields + pallet list length)
+print(f"GA pallets: {ga_best.palet_sayisi}, util: {ga_best.ortalama_doluluk:.2%}")
+print(f"DE pallets: {de_best.palet_sayisi}, util: {de_best.ortalama_doluluk:.2%}")
+print(f"Greedy pallets: {len(greedy_pallets)}")
+```
+
+## 🧪 Testing & Validation
+
+This repository currently does not include a dedicated automated test suite (`tests/` folder).
+
+Recommended validation workflow:
+
 ```bash
-# Test gravity constraint
-DEBUG_SUPPORT=1 python test_gravity_constraint.py
+# Run a sample optimization
+python main.py data/samples/0114.json
 
-# Test productionization features
-DEBUG_SUPPORT=1 python test_productionization.py
+# Compare GA vs DE vs Greedy in Streamlit
+streamlit run streamlit_benchmark.py
 ```
 
-### Algorithm Selection
+**Gravity Constraint:**
+- Minimum support ratio: 0.40 (40% of item bottom must rest on support)
+- Applies to items above ground level
+- Ensures structural stability in warehouses
 
-The web interface supports both optimization algorithms:
-- **Genetic Algorithm (GA)**: Traditional evolutionary approach
-- **Differential Evolution (DE)**: Advanced hybrid mutation strategy with Amazon-style stability constraints
+For now, validate changes via sample JSON runs and benchmark comparison.
 
-**Key Parameters**:
-- **GA**: Population size, generations, mutation rate, crossover rate
-- **DE**: NP (min: max(60, 0.8×N)), generations, F (adaptive 0.4-0.9), CR (0.9)
-- **Gravity Constraint**: min_support_ratio = 0.40 (40% support required above ground)
+## 📚 Input & Output Formats
 
----
-
-##  Input Data Format (JSON)
+### Input Format (JSON)
 
 ```json
 {
-  "containers": [
+  "id": 10000110,
+  "container": {
+    "length": 120,
+    "width": 100,
+    "height": 180,
+    "weight": 1250
+  },
+  "details": [
     {
-      "id": "container_1",
-      "length": 1200,
-      "width": 800,
-      "height": 1000,
-      "max_weight": 5000
-    }
-  ],
-  "products": [
-    {
-      "id": "prod_001",
-      "code": "SKU-12345",
-      "length": 100,
-      "width": 80,
-      "height": 50,
-      "weight": 20,
-      "quantity": 5,
-      "rotatable": true
+      "product": {
+        "id": 25312,
+        "code": "15100285",
+        "package_length": 100,
+        "package_width": 100,
+        "package_height": 170,
+        "package_weight": 1008.0,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 12,
+        "unit_weight": 1.04
+      },
+      "package_quantity": 1,
+      "quantity": 290.0,
+      "unit_id": "KG"
     }
   ]
 }
 ```
 
-## 📈 Output Data Format
+### Output Format
 
-Optimization results are stored in `output/reports/` in JSON format:
+`main.py` stores report output in `output/reports/optimization_result.json` with a structure like:
 
 ```json
 {
-  "containers": [
-    {
-      "container_id": "container_1",
-      "utilization": 0.78,
-      "weight_balance": 0.92,
-      "placements": [
-        {
-          "product_id": "prod_001",
-          "position": [0, 0, 0],
-          "orientation": [100, 80, 50]
-        }
-      ]
-    }
-  ],
-  "total_utilization": 0.78,
-  "total_weight": 4500,
-  "execution_time": 2.34
+  "input_file": "data/samples/0114.json",
+  "algorithm": "genetic",
+  "elapsed_seconds": 2.34,
+  "container": {
+    "length": 120,
+    "width": 100,
+    "height": 180,
+    "max_weight": 1250
+  },
+  "total_products": 120,
+  "theoretical_min_pallets": 6,
+  "result": {
+    "total_pallets": 7,
+    "single_pallets": 3,
+    "mix_pallets": 4,
+    "avg_fill_ratio": 82.1
+  }
 }
 ```
 
@@ -298,7 +453,7 @@ from src.core.genetic_algorithm import run_ga
 from src.models import PaletConfig, UrunData
 
 # Define container
-container = PaletConfig(length=1200, width=800, height=1000, max_weight=5000)
+container = PaletConfig(length=120, width=100, height=180, max_weight=1250)
 
 # Define product
 product = UrunData(
@@ -310,71 +465,54 @@ product = UrunData(
 )
 
 # Run optimization
-result = run_ga(
-    containers=[container],
-    urunler=[product],
-    population_size=50,
-    generations=100
+best, history = run_ga(
+  urunler=[product],
+  palet_cfg=container,
 )
 
-print(f"Container Utilization: {result['utilization']:.2%}")
+if best:
+  print(best.palet_sayisi, best.ortalama_doluluk, best.fitness)
 ```
 
-### Using Django ORM
+### Using Django Service Layer
 
-```python
-from palet_app.models import Palet, Urun
-from palet_app.services import optimize_pallet
+Core integration entry points are implemented in `palet_app/services.py`, including:
+- `single_palet_yerlestirme(...)`
+- `chromosome_to_palets(...)`
+- `merge_repack_service(...)`
 
-# Get products from database
-products = Urun.objects.all()
+These functions are used from Django workflow code and require ORM model instances.
 
-# Run optimization
-result = optimize_pallet(products)
+## 📈 Fitness & Evaluation
 
-# Save results
-palet = Palet.objects.create(
-    name=f"Optimized_{result['id']}",
-    utilization=result['utilization']
-)
-```
+### Fitness Function
 
-## 📈 Algorithm Details
-
-### Genetic Algorithm Parameters
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| Population Size | 50 | Number of individuals in population |
-| Generations | 100 | Number of evolution cycles |
-| Mutation Rate | 0.1 | Mutation probability (0-1) |
-| Crossover Rate | 0.8 | Crossover probability (0-1) |
-| Selection Type | Tournament | Tournament selection |
-
-### Fitness Calculation
+All algorithms use the same fitness evaluation framework:
 
 ```
-Fitness = (w1 × Utilization) + (w2 × Weight_Balance) - (w3 × Penalty)
+Fitness(solution) = (w_util × Utilization) 
+                   + (w_balance × Weight_Balance) 
+                   - (w_void × Void_Penalty)
+                   - (w_cavity × Cavity_Penalty)
+                   + (w_edge × Edge_Bonus)
 
 where:
-- Utilization: Container filling ratio (0-1)
-- Weight_Balance: Weight balance index (0-1)  
-- Penalty: Constraint violation penalty (0-1)
-- w1, w2, w3: Weight coefficients
+- Utilization: Total items volume / Total pallet volume
+- Weight_Balance: Uniformity of weight distribution across pallets
+- Void_Penalty: Internal air gaps (low = good packing)
+- Cavity_Penalty: Closed cavities that waste space
+- Edge_Bonus: Items near walls (better stability)
 ```
 
-## 🧪 Testing
+### Fitness Parameters
 
-```bash
-# Run all tests
-python -m pytest tests/
-
-# Run specific test category
-python -m pytest tests/algorithms/ -v
-
-# Coverage report
-pytest --cov=src tests/
-```
+| Parameter | Default | Range | Purpose |
+|-----------|---------|-------|---------|
+| w_util | 0.5 | 0.3–0.7 | Volume efficiency weight |
+| w_balance | 0.25 | 0.1–0.4 | Weight distribution weight |
+| w_void | 0.8 | 0.6–1.2 | Void penalty weight |
+| w_cavity | 0.35 | 0.2–0.6 | Cavity penalty weight |
+| w_edge | 0.15 | 0.1–0.3 | Edge bonus weight |
 
 ## 📦 Dependencies
 
@@ -408,7 +546,17 @@ COPY . .
 CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]
 ```
 
-## 🔗 Related Resources
+## Future Work
+
+- **Parallel Optimization**: Run multiple algorithms simultaneously for faster result generation
+- **GPU Acceleration**: CUDA-enabled fitness evaluation for large-scale problems
+- **Reinforcement Learning**: ML-based placement prediction and policy learning
+- **Better Heuristic Initialization**: Use ML preprocessing to generate better initial populations
+- **Advanced Constraints**: Fragility levels, item priority ordering, temporal scheduling
+- **Multi-Objective Optimization**: Simultaneously optimize cost, time, and utilization
+- **Integration with WMS**: Real-time inventory optimization from warehouse management systems
+
+## Related Resources
 
 - [NP-Hard Problem - Wikipedia](https://en.wikipedia.org/wiki/NP-hardness)
 - [Bin Packing Problem](https://en.wikipedia.org/wiki/Bin_packing_problem)
