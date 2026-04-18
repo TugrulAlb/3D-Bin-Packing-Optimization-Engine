@@ -7,26 +7,26 @@
 ## 🧭 User Workflow
 
 ### 1. Upload Product Data
-![Upload](img/1.png)
+![Upload](docs/assets/1.png)
 
 ### 2. Review Products & Select Algorithm
-![Selection](img/2.png)
+![Selection](docs/assets/2.png)
 
 ### 3. Optimization Process
-![Processing](img/3.png)
+![Processing](docs/assets/3.png)
 
 ### 4. Optimization Results
-![Summary](img/4.png)
+![Summary](docs/assets/4.png)
 
 ### 5. Pallet Breakdown
-![Pallets](img/5.png)
+![Pallets](docs/assets/5.png)
 
 ### 6. 3D Visualization
-![3D](img/6.png)
+![3D](docs/assets/6.png)
 
 ## 🔬 Benchmark Comparison
 
-![Benchmark](img/benchmark.png)
+![Benchmark](docs/assets/benchmark.png)
 
 ## 📋 About the Project
 
@@ -67,11 +67,11 @@ The system operates through a **two-stage optimization pipeline**:
 
 ### Result Dashboard Example
 
-![Result Dashboard Example](img/5.png)
+![Result Dashboard Example](docs/assets/5.png)
 
 ### 3D Pallet Visualization
 
-![3D Pallet Visualization](img/6.png)
+![3D Pallet Visualization](docs/assets/6.png)
 
 The optimization workflow processes items through a structured pipeline:
 
@@ -544,7 +544,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY . .
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
 ```
 
 ## Future Work
