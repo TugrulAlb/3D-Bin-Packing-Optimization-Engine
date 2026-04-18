@@ -18,12 +18,37 @@ Referanslar:
 
 import math
 import random
+import time
 from typing import List
 
 from .chromosome import Chromosome
 from .fitness import evaluate_fitness_lexicographic
 from ..utils.helpers import urun_hacmi
 from ..models.container import PaletConfig
+
+
+def _adaptive_ga_params(n_items: int) -> dict:
+    """Problem boyutuna göre GA parametreleri türetir.
+
+    Hiçbir sabit eşik yok — her şey log/sqrt/clamp formülleriyle ölçekli.
+    """
+    n = max(1, n_items)
+
+    pop_size = int(max(30, min(150, round(math.sqrt(n) * 6))))
+    generations = int(max(40, min(250, round(math.log2(n + 1) * 30))))
+    shock_trigger = int(max(10, min(30, round(math.sqrt(n) * 1.5))))
+    patience = int(max(20, min(80, round(math.log2(n + 1) * 6 + shock_trigger))))
+    min_gens = int(max(15, round(generations * 0.2)))
+    time_budget_sec = float(max(10.0, min(180.0, n * 0.35)))
+
+    return {
+        'population_size': pop_size,
+        'generations': generations,
+        'shock_trigger': shock_trigger,
+        'patience': patience,
+        'min_gens': min_gens,
+        'time_budget_sec': time_budget_sec,
+    }
 
 
 # ====================================================================
@@ -176,21 +201,18 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
         return None, []
 
     n_urun = len(urunler)
-    
-    # ADAPTIVE PARAMETERS
-    if n_urun > 100:
-        population_size = 50
-        generations = 100
-        mutation_rate = 0.4
-        tournament_k = 2
-        print(f"LIGHT & FAST MODE (Auto-Orientation): n_urun={n_urun} > 100")
-        print(f"   Parameters: pop=50, gen=100, mut=0.4, tournament_k=2")
-    else:
-        if population_size is None:
-            population_size = 50
-        if generations is None:
-            generations = 30
-    
+
+    adaptive = _adaptive_ga_params(n_urun)
+    if population_size is None:
+        population_size = adaptive['population_size']
+    if generations is None:
+        generations = adaptive['generations']
+
+    shock_trigger = adaptive['shock_trigger']
+    patience = adaptive['patience']
+    min_gens = min(adaptive['min_gens'], max(1, generations - 1))
+    time_budget_sec = adaptive['time_budget_sec']
+
     if elitism is None:
         elitism = max(2, int(population_size * 0.05))
 
@@ -204,10 +226,12 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
     print(f"GA Parametreler:")
     print(f"   Ürün Sayısı: {n_urun}")
     print(f"   Population: {population_size}")
-    print(f"   Generations: {generations}")
+    print(f"   Generations: {generations} (min={min_gens})")
     print(f"   Elitism: {elitism}")
     print(f"   Mutation Rate: {mutation_rate}")
     print(f"   Tournament K: {tournament_k}")
+    print(f"   Early stop: patience={patience}, shock_trigger={shock_trigger}, "
+          f"time_budget={time_budget_sec:.0f}s")
 
     # Teorik minimum palet sayısı (fitness ile aynı formül: ceil)
     total_load_vol = sum(urun_hacmi(u) for u in urunler)
@@ -237,12 +261,35 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
         evaluate_fitness_lexicographic(c, palet_cfg)
 
     history = []
-    
+
     # Anti-Stagnation takip değişkenleri
     best_fitness_tracker = float('-inf')
     generations_without_improvement = 0
+    shocks_fired = 0
+    shocks_without_improvement = 0
+    max_fruitless_shocks = max(2, int(math.ceil(math.log2(max(2, n_urun)) / 2)))
+    t_start = time.time()
+    stop_reason = None
+    last_gen = -1
 
     for gen in range(generations):
+        last_gen = gen
+        elapsed = time.time() - t_start
+        if gen >= min_gens and elapsed >= time_budget_sec:
+            stop_reason = f"time_budget ({elapsed:.1f}s ≥ {time_budget_sec:.0f}s)"
+            break
+        if gen >= min_gens and generations_without_improvement >= patience:
+            stop_reason = (
+                f"patience plateau ({generations_without_improvement} gen no improve, "
+                f"{shocks_fired} şok)"
+            )
+            break
+        if gen >= min_gens and shocks_without_improvement >= max_fruitless_shocks:
+            stop_reason = (
+                f"{shocks_without_improvement} ardışık meyvesiz şok "
+                f"(limit={max_fruitless_shocks})"
+            )
+            break
         population.sort(key=lambda c: c.fitness, reverse=True)
         current_best = population[0]
         
@@ -284,12 +331,15 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
         if current_best.fitness > best_fitness_tracker:
             best_fitness_tracker = current_best.fitness
             generations_without_improvement = 0
+            shocks_without_improvement = 0
         else:
             generations_without_improvement += 1
-        
+
         # GENETİK ŞOK: hem rastgele hem heuristik tohumlarla cesitlilik
-        if generations_without_improvement >= 15 and gen < generations - 5:
-            print(f"  GENETIK SOK: {generations_without_improvement} nesil iyilesme yok")
+        if generations_without_improvement >= shock_trigger and gen < generations - 5:
+            shocks_fired += 1
+            shocks_without_improvement += 1
+            print(f"  GENETIK SOK #{shocks_fired}: {generations_without_improvement} nesil iyilesme yok")
             num_to_replace = int(population_size * 0.55)
             n_vol = num_to_replace // 3
             n_wgt = num_to_replace // 3
@@ -351,5 +401,12 @@ def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=No
     # Son değerlendirme
     population.sort(key=lambda c: c.fitness, reverse=True)
     best_solution = population[0]
+
+    elapsed = time.time() - t_start
+    total_gens = last_gen + 1 if last_gen >= 0 else 0
+    if stop_reason:
+        print(f"[GA] Early stop @ gen {total_gens}/{generations}: {stop_reason} (süre: {elapsed:.1f}s)")
+    else:
+        print(f"[GA] Finished {total_gens}/{generations} generations (süre: {elapsed:.1f}s)")
 
     return best_solution, history
