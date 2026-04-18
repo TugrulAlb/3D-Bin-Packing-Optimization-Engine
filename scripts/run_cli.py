@@ -7,10 +7,10 @@ Django'dan bağımsız olarak algoritmaları doğrudan çalıştırır.
 Test verileriyle hızlı deney yapmak için kullanılır.
 
 Kullanım:
-    python main.py                          # Varsayılan test dosyası
-    python main.py data/samples/0109.json   # Belirli dosya
-    python main.py --algorithm greedy       # Greedy mod
-    python main.py --algorithm genetic      # GA mod (varsayılan)
+    python scripts/run_cli.py                          # Varsayılan test dosyası
+    python scripts/run_cli.py data/samples/0109.json   # Belirli dosya
+    python scripts/run_cli.py --algorithm greedy       # Greedy mod
+    python scripts/run_cli.py --algorithm genetic      # GA mod (varsayılan)
 """
 
 import sys
@@ -19,8 +19,8 @@ import json
 import argparse
 import time
 
-# Proje kökünü sys.path'e ekle
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
 
 from src.models import PaletConfig, UrunData
 from src.utils.parser import parse_json_input, load_json_file
@@ -234,24 +234,24 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Örnekler:
-  python main.py data/samples/0109.json
-  python main.py data/samples/0109.json --algorithm greedy
-  python main.py data/samples/0109.json --output results/
+  python scripts/run_cli.py data/samples/0109.json
+  python scripts/run_cli.py data/samples/0109.json --algorithm greedy
+  python scripts/run_cli.py data/samples/0109.json --output results/
         """
     )
     parser.add_argument('input', nargs='?', default=None,
                         help='Girdi JSON dosya yolu')
     parser.add_argument('--algorithm', '-a', choices=['genetic', 'greedy'],
                         default='genetic', help='Kullanılacak algoritma (varsayılan: genetic)')
-    parser.add_argument('--output', '-o', default='output',
-                        help='Çıktı klasörü (varsayılan: output/)')
+    parser.add_argument('--output', '-o', default=os.path.join(PROJECT_ROOT, 'output'),
+                        help='Çıktı klasörü (varsayılan: <proje_koku>/output/)')
     
     args = parser.parse_args()
     
     # Girdi dosyası kontrolü
     if args.input is None:
         # data/samples/ altındaki ilk JSON dosyasını bul
-        samples_dir = os.path.join(os.path.dirname(__file__), 'data', 'samples')
+        samples_dir = os.path.join(PROJECT_ROOT, 'data', 'samples')
         if os.path.exists(samples_dir):
             json_files = sorted([f for f in os.listdir(samples_dir) if f.endswith('.json')])
             if json_files:
@@ -262,7 +262,7 @@ def main():
                 sys.exit(1)
         else:
             print("HATA: data/samples/ klasörü bulunamadı.")
-            print("Kullanım: python main.py <girdi.json>")
+            print("Kullanım: python scripts/run_cli.py <girdi.json>")
             sys.exit(1)
     
     if not os.path.exists(args.input):
