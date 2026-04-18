@@ -202,6 +202,29 @@ def analysis(request):
 
         pie_chart_html, bar_chart_html = ozet_grafikler_olustur(optimization)
 
+        benchmark_siblings = []
+        if optimization.benchmark_group_id:
+            sibling_qs = Optimization.objects.filter(
+                benchmark_group_id=optimization.benchmark_group_id,
+                tamamlandi=True,
+            ).exclude(id=optimization.id).order_by('id')
+            algo_label = {
+                'greedy': 'Greedy',
+                'genetic': 'Genetik Algoritma',
+                'differential_evolution': 'Differential Evolution',
+            }
+            for sib in sibling_qs:
+                elapsed = None
+                if sib.bitis_zamani and sib.baslangic_zamani:
+                    elapsed = round((sib.bitis_zamani - sib.baslangic_zamani).total_seconds(), 2)
+                benchmark_siblings.append({
+                    'id': sib.id,
+                    'algoritma': sib.algoritma,
+                    'label': algo_label.get(sib.algoritma, sib.algoritma),
+                    'toplam_palet': sib.toplam_palet,
+                    'elapsed': elapsed,
+                })
+
         context = {
             'optimization': optimization,
             'paletler': paletler,
@@ -210,6 +233,7 @@ def analysis(request):
             'yerlesmemis_urunler': optimization.yerlesmemis_urunler,
             'pie_chart_html': pie_chart_html,
             'bar_chart_html': bar_chart_html,
+            'benchmark_siblings': benchmark_siblings,
         }
 
         print("Analysis sayfasi render ediliyor...")
