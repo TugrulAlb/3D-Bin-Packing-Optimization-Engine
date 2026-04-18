@@ -23,10 +23,35 @@ References:
 
 import math
 import random
+import time
 import numpy as np
 import os
 from typing import List, Tuple, Dict, Optional
 from dataclasses import dataclass
+
+
+def _adaptive_de_params(n_items: int) -> dict:
+    """Problem boyutuna göre DE parametreleri türetir.
+
+    Tüm değerler log/sqrt/clamp formüllerinden gelir — sabit eşik yok.
+    """
+    n = max(1, n_items)
+
+    pop_size = int(max(30, min(150, round(0.8 * n))))
+    generations = int(max(30, min(200, round(math.log2(n + 1) * 18))))
+    diversity_trigger = int(max(6, min(20, round(math.sqrt(n)))))
+    patience = int(max(15, min(60, round(math.log2(n + 1) * 5 + diversity_trigger))))
+    min_gens = int(max(10, round(generations * 0.2)))
+    time_budget_sec = float(max(15.0, min(240.0, n * 0.5)))
+
+    return {
+        'population_size': pop_size,
+        'generations': generations,
+        'diversity_trigger': diversity_trigger,
+        'patience': patience,
+        'min_gens': min_gens,
+        'time_budget_sec': time_budget_sec,
+    }
 
 from .packing import compact_pallet, local_repair
 from .packing_first_fit import pack_maximal_rectangles_first_fit
@@ -708,39 +733,28 @@ def run_de(
         return None, []
     
     n_items = len(urunler)
-    
-    # ADAPTIVE PARAMETERS - UPGRADED
+
+    adaptive = _adaptive_de_params(n_items)
     user_provided_np = population_size is not None
-    np_config_source = "USER" if user_provided_np else "AUTO"
-    np_user_original = population_size  # Store original user input
-    
-    # Calculate expected minimum NP
-    np_expected = max(60, int(0.8 * n_items))
-    
+    np_expected = adaptive['population_size']
+
     if population_size is None:
-        # AUTO: Use adaptive formula
         population_size = np_expected
     else:
-        # ENFORCE MINIMUM: User can increase NP, but not decrease below expected
         population_size = max(population_size, np_expected)
-    
-    # HARD VERIFICATION: Log NP calculation with enforcement details
-    if user_provided_np:
-        if np_user_original < np_expected:
-            print(f"[DE] NP_CONFIG={np_config_source} NP_USER={np_user_original} "
-                  f"NP_EXPECTED={np_expected} NP_ACTUAL={population_size} (enforced minimum) N_ITEMS={n_items}")
-        else:
-            print(f"[DE] NP_CONFIG={np_config_source} NP_USER={np_user_original} "
-                  f"NP_EXPECTED={np_expected} NP_ACTUAL={population_size} N_ITEMS={n_items}")
-    else:
-        print(f"[DE] NP_CONFIG={np_config_source} NP_ACTUAL={population_size} N_ITEMS={n_items} "
-              f"(formula: max(60, int(0.8*{n_items})) = {np_expected})")
-    
+
     if generations is None:
-        if n_items > 100:
-            generations = 100
-        else:
-            generations = 50
+        generations = adaptive['generations']
+
+    diversity_trigger = adaptive['diversity_trigger']
+    patience = adaptive['patience']
+    min_gens = min(adaptive['min_gens'], max(1, generations - 1))
+    time_budget_sec = adaptive['time_budget_sec']
+
+    print(f"[DE] NP={population_size} (expected {np_expected}, user_provided={user_provided_np}) "
+          f"N_ITEMS={n_items} gens={generations} "
+          f"diversity_trigger={diversity_trigger} patience={patience} "
+          f"min_gens={min_gens} time_budget={time_budget_sec:.0f}s")
     
     print("\n" + "="*70)
     print("ADVANCED DIFFERENTIAL EVOLUTION OPTIMIZER V2.0")
@@ -757,7 +771,8 @@ def run_de(
     else:
         print(f"   Rotation: Auto-Orientation (no explicit rotation genes)")
     print(f"   Elite Repair: Every 5 generations (top 3, 50 mutations)")
-    print(f"   Diversity Injection: If stagnant for 8 generations")
+    print(f"   Diversity Injection: If stagnant for {diversity_trigger} generations")
+    print(f"   Early Stop: patience={patience} gens, min_gens={min_gens}, time_budget={time_budget_sec:.0f}s")
     print("="*70 + "\n")
     
     # Initialize fitness cache
@@ -785,9 +800,33 @@ def run_de(
     # DIVERSITY INJECTION tracking
     last_improvement_gen = 0
     best_fitness_tracker = best_individual.fitness
-    
+    diversity_injections = 0
+    injections_without_improvement = 0
+    max_fruitless_injections = max(2, int(math.ceil(math.log2(max(2, n_items)) / 2)))
+    t_start = time.time()
+    stop_reason = None
+    last_gen = -1
+
     # Main DE loop
     for gen in range(generations):
+        last_gen = gen
+        elapsed = time.time() - t_start
+        stagnant = gen - last_improvement_gen
+        if gen >= min_gens and elapsed >= time_budget_sec:
+            stop_reason = f"time_budget ({elapsed:.1f}s ≥ {time_budget_sec:.0f}s)"
+            break
+        if gen >= min_gens and stagnant >= patience:
+            stop_reason = (
+                f"patience plateau ({stagnant} gen no improve, "
+                f"{diversity_injections} injection)"
+            )
+            break
+        if gen >= min_gens and injections_without_improvement >= max_fruitless_injections:
+            stop_reason = (
+                f"{injections_without_improvement} ardışık meyvesiz injection "
+                f"(limit={max_fruitless_injections})"
+            )
+            break
         # Best index (already sorted)
         best_idx = 0
         
@@ -815,13 +854,17 @@ def run_de(
                     best_individual = trial.copy()
                     last_improvement_gen = gen
                     best_fitness_tracker = best_individual.fitness
+                    injections_without_improvement = 0
         
         # Re-sort population
         population.sort(key=lambda x: x.fitness, reverse=True)
         
-        # DIVERSITY INJECTION: If no improvement for 8 generations
-        if gen - last_improvement_gen >= 8:
-            print(f"Generation {gen+1}: Diversity injection (stagnant for {gen - last_improvement_gen} gens)...")
+        # DIVERSITY INJECTION: If no improvement for diversity_trigger generations
+        if gen - last_improvement_gen >= diversity_trigger:
+            diversity_injections += 1
+            injections_without_improvement += 1
+            print(f"Generation {gen+1}: Diversity injection #{diversity_injections} "
+                  f"(stagnant for {gen - last_improvement_gen} gens)...")
             
             # Reinitialize worst 25% using biased initialization
             n_reinit = max(1, int(population_size * 0.25))
@@ -857,6 +900,7 @@ def run_de(
             if population[0].fitness > best_individual.fitness:
                 best_individual = population[0].copy()
                 last_improvement_gen = gen
+                injections_without_improvement = 0
         
         # Record history
         current_best = population[0]
@@ -878,9 +922,15 @@ def run_de(
             print(f"   Improvements: {improvements}, Cache Hit Rate: {cache.get_hit_rate()*100:.1f}%")
     
     # Final report
+    elapsed_total = time.time() - t_start
+    total_gens = last_gen + 1 if last_gen >= 0 else 0
     print("\n" + "="*70)
     print("OPTIMIZATION COMPLETE")
     print("="*70)
+    if stop_reason:
+        print(f"Early stop @ gen {total_gens}/{generations}: {stop_reason} (süre: {elapsed_total:.1f}s)")
+    else:
+        print(f"Finished {total_gens}/{generations} generations (süre: {elapsed_total:.1f}s)")
     print(f"Best Solution:")
     print(f"   Fitness: {best_individual.fitness:.2f}")
     print(f"   Pallets Used: {best_individual.palet_sayisi}")
