@@ -126,37 +126,33 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
         optimization.islem_adimi_ekle(f"[TANI] Mix motoru başlıyor — yerleşmeyen ürün sayısı: {len(urun_data_listesi)}")
 
         if algoritma == 'genetic':
-            from src.core.genetic_algorithm import run_ga
+            from src.core.genetic_algorithm import run_ga, _adaptive_ga_params
 
             urun_sayisi = len(urun_data_listesi)
             ga_mode = (ga_mode or 'balanced').strip().lower()
             if ga_mode not in ('fast', 'balanced', 'quality'):
                 ga_mode = 'balanced'
 
-            if ga_mode == 'fast':
-                optimization.islem_adimi_ekle("Genetik Algoritma (Hızlı mod) ile mix paletler olusturuluyor...")
-                pop_size = 50 if urun_sayisi > 300 else 40
-                generations = 80 if urun_sayisi > 300 else 60
-                elitism = 2
-                mutation_rate = 0.24
-                tournament_k = 3
-            elif ga_mode == 'quality':
-                optimization.islem_adimi_ekle("Genetik Algoritma (Kaliteli mod) ile mix paletler olusturuluyor...")
-                pop_size = 150 if urun_sayisi > 500 else 120
-                generations = 280 if urun_sayisi > 500 else 220
-                elitism = max(4, min(10, pop_size // 12))
-                mutation_rate = 0.16
-                tournament_k = 4
-            else:
-                optimization.islem_adimi_ekle("Genetik Algoritma (Dengeli mod) ile mix paletler olusturuluyor...")
-                pop_size = 100 if urun_sayisi > 500 else (85 if urun_sayisi > 200 else 70)
-                generations = min(200, 120 + urun_sayisi // 10)
-                elitism = max(2, min(5, pop_size // 20))
-                mutation_rate = 0.20
-                tournament_k = 3
+            base = _adaptive_ga_params(urun_sayisi)
+            mode_scale = {
+                'fast': {'pop': 0.7, 'gen': 0.6, 'mut': 0.25, 'k': 3},
+                'balanced': {'pop': 1.0, 'gen': 1.0, 'mut': 0.20, 'k': 3},
+                'quality': {'pop': 1.4, 'gen': 1.6, 'mut': 0.16, 'k': 4},
+            }[ga_mode]
 
+            pop_size = max(20, int(round(base['population_size'] * mode_scale['pop'])))
+            generations = max(20, int(round(base['generations'] * mode_scale['gen'])))
+            elitism = max(2, min(10, pop_size // 15))
+            mutation_rate = mode_scale['mut']
+            tournament_k = mode_scale['k']
+
+            mode_label = {'fast': 'Hızlı', 'balanced': 'Dengeli', 'quality': 'Kaliteli'}[ga_mode]
             optimization.islem_adimi_ekle(
-                f"Mod: {ga_mode.upper()} | Pop={pop_size}, Nesil={generations}, Elit={elitism}, Mut={mutation_rate}, K={tournament_k}, Ürün={urun_sayisi}"
+                f"Genetik Algoritma ({mode_label} mod) ile mix paletler olusturuluyor..."
+            )
+            optimization.islem_adimi_ekle(
+                f"Mod: {ga_mode.upper()} | Pop={pop_size}, Nesil={generations}, "
+                f"Elit={elitism}, Mut={mutation_rate}, K={tournament_k}, Ürün={urun_sayisi}"
             )
 
             best_chromosome, history = run_ga(
@@ -189,26 +185,23 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
                 optimization.islem_adimi_ekle(f"{len(mix_paletler)} adet mix palet oluşturuldu (Greedy).")
 
         elif algoritma == 'differential_evolution':
-            from src.core.optimizer_de import optimize_with_de
+            from src.core.optimizer_de import optimize_with_de, _adaptive_de_params
 
             optimization.islem_adimi_ekle("Differential Evolution (DE) Motoru ile mix paletler olusturuluyor...")
             optimization.islem_adimi_ekle("İleri seviye optimizasyon teknikleri kullanılıyor...")
 
             urun_sayisi = len(urun_data_listesi)
-
-            pop_size = 50 if urun_sayisi > 100 else 40
-            generations = 100 if urun_sayisi > 100 else 60
+            de_base = _adaptive_de_params(urun_sayisi)
 
             optimization.islem_adimi_ekle(
-                f"DE Parametreler: Pop={pop_size}, Nesil={generations}, "
+                f"DE Parametreler: Pop={de_base['population_size']}, "
+                f"Nesil={de_base['generations']}, "
                 f"Ürün={urun_sayisi}, Fitness Önbellek: Aktif"
             )
 
             best_chromosome, history = optimize_with_de(
                 urunler=urun_data_listesi,
                 palet_cfg=palet_cfg,
-                population_size=pop_size,
-                generations=generations,
                 F=0.8,
                 CR_p=0.9,
             )
