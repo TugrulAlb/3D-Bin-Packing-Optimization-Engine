@@ -193,7 +193,7 @@ The web UI includes a built-in **"Toplu Test"** (bulk test) page that runs all t
 ├── data/samples/                  # Test JSON files
 ├── output/                        # Output directory (images, reports)
 ├── templates/                     # Base HTML templates
-├── main.py                        # Standalone CLI entry point
+├── scripts/run_cli.py             # Standalone CLI entry point
 ├── manage.py                      # Django management
 ├── requirements.txt               # Python dependencies
 └── README.md                      # This file
@@ -316,7 +316,7 @@ The application supports the following environment variables (see `.env.example`
 ### Command Line (GA)
 
 ```bash
-python main.py data/samples/0110.json
+python scripts/run_cli.py data/samples/0110.json
 ```
 
 ### Python API (DE Example)
@@ -370,7 +370,7 @@ Recommended validation workflow:
 
 ```bash
 # Run a sample optimization
-python main.py data/samples/0114.json
+python scripts/run_cli.py data/samples/0114.json
 
 # Compare GA vs DE vs Greedy in the web UI
 python manage.py runserver
@@ -421,7 +421,7 @@ For now, validate changes via sample JSON runs and benchmark comparison.
 
 ### Output Format
 
-`main.py` stores report output in `output/reports/optimization_result.json` with a structure like:
+`scripts/run_cli.py` stores report output in `output/reports/optimization_result.json` with a structure like:
 
 ```json
 {
