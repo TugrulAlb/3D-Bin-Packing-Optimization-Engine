@@ -1,0 +1,141 @@
+{
+  "id": 99999114,
+  "container": {
+    "length": 120,
+    "width": 100,
+    "height": 180,
+    "weight": 12500
+  },
+  "details": [
+    {
+      "product": {
+        "id": 15013726,
+        "code": "15013726",
+        "package_length": 40,
+        "package_width": 30,
+        "package_height": 25,
+        "package_weight": 10.0
+      },
+      "package_quantity": 137,
+      "quantity": 137,
+      "package_id": "15013726"
+    },
+    {
+      "product": {
+        "id": 15100285,
+        "code": "15100285",
+        "package_length": 45,
+        "package_width": 35,
+        "package_height": 30,
+        "package_weight": 12.0
+      },
+      "package_quantity": 80,
+      "quantity": 80,
+      "package_id": "15100285"
+    },
+    {
+      "product": {
+        "id": 21111752,
+        "code": "21111752",
+        "package_length": 50,
+        "package_width": 40,
+        "package_height": 35,
+        "package_weight": 15.0
+      },
+      "package_quantity": 58,
+      "quantity": 58,
+      "package_id": "21111752"
+    },
+    {
+      "product": {
+        "id": 67054510,
+        "code": "67054510",
+        "package_length": 35,
+        "package_width": 25,
+        "package_height": 20,
+        "package_weight": 7.5
+      },
+      "package_quantity": 232,
+      "quantity": 232,
+      "package_id": "67054510"
+    },
+    {
+      "product": {
+        "id": 99001,
+        "code": "99001",
+        "unit_length": 25,
+        "unit_width": 20,
+        "unit_height": 15,
+        "unit_weight": 1.2
+      },
+      "package_quantity": null,
+      "quantity": 93,
+      "package_id": "99001"
+    },
+    {
+      "product": {
+        "id": 99002,
+        "code": "99002",
+        "unit_length": 30,
+        "unit_width": 22,
+        "unit_height": 18,
+        "unit_weight": 1.8
+      },
+      "package_quantity": null,
+      "quantity": 65,
+      "package_id": "99002"
+    },
+    {
+      "product": {
+        "id": 99003,
+        "code": "99003",
+        "unit_length": 20,
+        "unit_width": 15,
+        "unit_height": 12,
+        "unit_weight": 0.8
+      },
+      "package_quantity": null,
+      "quantity": 162,
+      "package_id": "99003"
+    },
+    {
+      "product": {
+        "id": 99004,
+        "code": "99004",
+        "unit_length": 28,
+        "unit_width": 20,
+        "unit_height": 20,
+        "unit_weight": 1.5
+      },
+      "package_quantity": null,
+      "quantity": 59,
+      "package_id": "99004"
+    },
+    {
+      "product": {
+        "id": 99005,
+        "code": "99005",
+        "unit_length": 22,
+        "unit_width": 18,
+        "unit_height": 15,
+        "unit_weight": 1.1
+      },
+      "package_quantity": null,
+      "quantity": 105,
+      "package_id": "99005"
+    },
+    {
+      "product": {
+        "id": 99006,
+        "code": "99006",
+        "unit_length": 18,
+        "unit_width": 14,
+        "unit_height": 10,
+        "unit_weight": 0.6
+      },
+      "package_quantity": null,
+      "quantity": 216,
+      "package_id": "99006"
+    }
+  ]
+}
