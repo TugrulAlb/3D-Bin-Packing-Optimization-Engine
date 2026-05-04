@@ -5,7 +5,6 @@ import os
 from unittest import mock
 
 from django.test import TestCase, override_settings
-from django.urls import reverse
 from rest_framework.test import APIClient
 
 from palet_app.models import Optimization, Palet, Urun
@@ -207,16 +206,65 @@ class CancelTest(ApiBaseTest):
 
 
 class ParserTest(TestCase):
-    """Refactor edilen parser'ın 0114.json'ı doğru parse ettiğini doğrula."""
+    """Tüm sample dosyaları için parser regression."""
 
-    def test_parses_sample_0114(self):
+    SAMPLES_DIR = os.path.join(os.path.dirname(SAMPLE_JSON))
+
+    def test_parses_all_samples(self):
         from palet_app.services import parse_optimization_payload
-        if not os.path.exists(SAMPLE_JSON):
-            self.skipTest("0114.json not found")
-        payload = load_sample()
-        urun_verileri, container = parse_optimization_payload(payload)
-        self.assertGreater(len(urun_verileri), 0)
-        self.assertIn("length", container)
-        for u in urun_verileri[:3]:
-            for f in ("urun_kodu", "boy", "en", "yukseklik", "agirlik"):
-                self.assertIn(f, u)
+        if not os.path.isdir(self.SAMPLES_DIR):
+            self.skipTest("samples dir not found")
+        sample_files = [
+            f for f in os.listdir(self.SAMPLES_DIR)
+            if f.endswith(".json") and not f.startswith(("t_", "test"))
+        ]
+        self.assertGreater(len(sample_files), 0, "No sample JSONs found")
+        for fname in sample_files:
+            with self.subTest(sample=fname):
+                with open(os.path.join(self.SAMPLES_DIR, fname), encoding="utf-8") as f:
+                    payload = json.load(f)
+                urun_verileri, container = parse_optimization_payload(payload)
+                self.assertGreater(len(urun_verileri), 0, f"{fname}: empty parse")
+                for f_ in ("urun_kodu", "boy", "en", "yukseklik", "agirlik"):
+                    self.assertIn(f_, urun_verileri[0])
+
+    def test_rejects_invalid_payload(self):
+        from palet_app.services import parse_optimization_payload
+        with self.assertRaises(ValueError):
+            parse_optimization_payload({"foo": "bar"})
+        with self.assertRaises(ValueError):
+            parse_optimization_payload([])
+
+    def test_rejects_excessive_quantity(self):
+        from palet_app.services import parse_optimization_payload
+        payload = {
+            "container": {"length": 120, "width": 100, "height": 180, "weight": 1250},
+            "details": [{
+                "product": {"code": "X",
+                            "package_length": 10, "package_width": 10,
+                            "package_height": 10, "package_weight": 1},
+                "package_quantity": 999_999_999,
+            }],
+        }
+        with self.assertRaises(ValueError):
+            parse_optimization_payload(payload)
+
+
+class ConcurrencyLimitTest(ApiBaseTest):
+    @override_settings(API_KEYS={"test": "secret-test-key"}, API_MAX_CONCURRENT_JOBS=1)
+    def test_capacity_exceeded(self):
+        Optimization.objects.create(
+            container_length=120, container_width=100,
+            container_height=180, container_weight=1250,
+            algoritma="greedy", tamamlandi=False,
+        )
+        payload = {
+            "container": {"length": 120, "width": 100, "height": 180, "weight": 1250},
+            "details": [{"product": {"code": "X",
+                                     "package_length": 10, "package_width": 10,
+                                     "package_height": 10, "package_weight": 1},
+                          "package_quantity": 1}],
+        }
+        r = self.client.post("/api/v1/optimize/", data=payload, format="json")
+        self.assertEqual(r.status_code, 429)
+        self.assertEqual(r.data["error"]["code"], "CAPACITY_EXCEEDED")

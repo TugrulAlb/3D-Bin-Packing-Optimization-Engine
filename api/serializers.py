@@ -131,7 +131,7 @@ def _palet_to_dict(palet: Palet, urun_index: dict) -> dict:
 
     try:
         doluluk = round(palet.doluluk_orani(), 2) if palet.hacim() else 0.0
-    except Exception:
+    except (ZeroDivisionError, TypeError, AttributeError):
         doluluk = 0.0
 
     return {
