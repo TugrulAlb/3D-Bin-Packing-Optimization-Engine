@@ -48,6 +48,20 @@ db.sqlite3-journal
 !.env.example
 
 # =================================
+# Linter / Type-checker caches
+# =================================
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.pytype/
+
+# =================================
+# Local notes / scratch
+# =================================
+local_notes/
+_scratch/
+
+# =================================
 # Generated Output Files
 # =================================
 # Pallet visualization images
