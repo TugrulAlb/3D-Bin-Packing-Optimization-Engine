@@ -1,6 +1,7 @@
 """Tekil optimizasyon başlatma, ilerleme ve analiz view'ları."""
 
 import json
+import logging
 from threading import Thread
 
 from django.db import transaction
@@ -13,19 +14,17 @@ from ..services import ozet_grafikler_olustur
 from ..workers import run_optimization, normalize_progress
 
 
+logger = logging.getLogger(__name__)
+
+
 def processing(request):
     """İşlem simülasyonu sayfası."""
     if 'urun_verileri' not in request.session:
-        print("UYARI: processing: Session'da urun_verileri yok!")
         return redirect('palet_app:home')
 
     container_info = request.session.get('container_info')
     if not container_info:
-        print("UYARI: processing: Session'da container_info yok!")
         return redirect('palet_app:home')
-
-    optimization_id = request.session.get('optimization_id')
-    print(f"processing sayfasi yuklendi (Optimization ID: {optimization_id})")
 
     return render(request, 'palet_app/processing.html')
 
@@ -56,15 +55,14 @@ def start_placement(request):
         else:
             algoritma = 'genetic'
         if algoritma not in ('genetic', 'differential_evolution', 'greedy'):
-            print(f"[start_placement] Gecersiz algoritma '{algoritma_raw}' -> genetic kullaniliyor")
+            logger.warning("Geçersiz algoritma '%s', genetic kullanılıyor", algoritma_raw)
             algoritma = 'genetic'
         if algoritma == 'genetic':
             gm = (body.get('ga_mode') or 'balanced').strip().lower()
             if gm in ('fast', 'balanced', 'quality'):
                 ga_mode = gm
-        print(f"[start_placement] Algoritma: {algoritma!r}, GA mod: {ga_mode!r}")
-    except Exception as e:
-        print(f"[start_placement] Body parse hatasi, varsayilan genetic kullaniliyor: {e}")
+    except (json.JSONDecodeError, ValueError, AttributeError) as e:
+        logger.warning("Body parse hatası, varsayılan genetic kullanılıyor: %s", e)
         algoritma = 'genetic'
 
     container_length = container_info.get('length', 120)
@@ -91,15 +89,12 @@ def start_placement(request):
         request.session['algoritma'] = algoritma
         request.session.modified = True
 
-        print(f"\n{'='*60}")
-        print("YENI OPTIMIZASYON BASLATILDI")
-        print(f"{'='*60}")
-        print(f"Optimization ID: {optimization.id}")
-        print(f"Algoritma: {algoritma}")
-        print(f"Container: {container_length}x{container_width}x{container_height} cm")
-        print(f"Max Ağırlık: {container_weight} kg")
-        print(f"Ürün Sayısı: {len(request.session['urun_verileri'])}")
-        print(f"{'='*60}\n")
+        logger.info(
+            "Yeni optimizasyon başlatıldı: id=%d algo=%s ga_mode=%s container=%sx%sx%s w=%s items=%d",
+            optimization.id, algoritma, ga_mode,
+            container_length, container_width, container_height, container_weight,
+            len(request.session['urun_verileri']),
+        )
 
         container_dict = {
             'length': container_length,
@@ -112,17 +107,14 @@ def start_placement(request):
             thread = Thread(
                 target=run_optimization,
                 args=(request.session['urun_verileri'], container_dict, optimization.id, algoritma, ga_mode),
+                daemon=True,
             )
-            thread.daemon = True
             thread.start()
-            print(f"Thread baslatildi (ID: {optimization.id})")
         except Exception as e:
-            print(f"HATA: Thread baslatma hatasi: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            logger.exception("Thread başlatma hatası (opt %s)", optimization.id)
             return JsonResponse({
                 'success': False,
-                'error': f'Thread başlatılamadı: {str(e)}',
+                'error': 'Thread başlatılamadı.',
             }, status=500)
 
     return JsonResponse({
@@ -137,17 +129,13 @@ def optimization_status(request):
     """Optimizasyon durumunu döndürür."""
     optimization_id = request.session.get('optimization_id')
     if not optimization_id:
-        print("UYARI: optimization_status: Session'da optimization_id yok!")
         return JsonResponse({'success': False, 'error': 'Optimizasyon bulunamadı.'}, status=400)
 
     try:
         optimization = Optimization.objects.get(id=optimization_id)
         durum = optimization.get_islem_durumu()
 
-        print(f"Status check (ID: {optimization_id}): Completed={optimization.tamamlandi}, Step={durum.get('current_step', 0)}/{durum.get('total_steps', 5)}")
-
         if optimization.tamamlandi:
-            print("Optimization tamamlandi, yonlendirme yapiliyor...")
             return JsonResponse({
                 'success': True,
                 'completed': True,
@@ -174,7 +162,6 @@ def optimization_status(request):
         })
 
     except Optimization.DoesNotExist:
-        print(f"Optimization bulunamadi (ID: {optimization_id})")
         return JsonResponse({'success': False, 'error': 'Optimizasyon bulunamadı.'}, status=400)
 
 
@@ -182,23 +169,15 @@ def analysis(request):
     """Optimizasyon sonuçlarını gösterir."""
     optimization_id = request.session.get('optimization_id')
     if not optimization_id:
-        print("UYARI: analysis: Session'da optimization_id yok!")
         return redirect('palet_app:home')
-
-    print(f"analysis view cagrildi (ID: {optimization_id})")
 
     try:
         optimization = get_object_or_404(Optimization, id=optimization_id)
 
-        print(f"   Tamamlandı: {optimization.tamamlandi}")
-        print(f"   Toplam Palet: {optimization.toplam_palet}")
-
         if not optimization.tamamlandi:
-            print("UYARI: Optimizasyon henuz tamamlanmamis, processing'e yonlendiriliyor...")
             return redirect('palet_app:processing')
 
         paletler = Palet.objects.filter(optimization=optimization).order_by('palet_id')
-        print(f"   Bulunan palet sayısı: {paletler.count()}")
 
         pie_chart_html, bar_chart_html = ozet_grafikler_olustur(optimization)
 
@@ -236,9 +215,7 @@ def analysis(request):
             'benchmark_siblings': benchmark_siblings,
         }
 
-        print("Analysis sayfasi render ediliyor...")
         return render(request, 'palet_app/analysis.html', context)
 
     except Optimization.DoesNotExist:
-        print(f"Optimization bulunamadi (ID: {optimization_id})")
         return redirect('palet_app:home')
