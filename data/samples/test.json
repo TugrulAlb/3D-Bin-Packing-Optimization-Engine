@@ -14,37 +14,42 @@
         "package_length": 40,
         "package_width": 30,
         "package_height": 25,
-        "package_weight": 10.0
+        "package_weight": 10,
+        "package_in_unit": 500,
+        "package_max_stack_weight": 200,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 12,
+        "unit_weight": 1.003,
+        "units_per_layer": null
       },
-      "package_quantity": 137,
-      "quantity": 137,
-      "package_id": "15013726"
+      "package_quantity": 72,
+      "package_id": "T-15013726-A",
+      "quantity": 1440,
+      "unit_id": "KG"
     },
     {
       "product": {
-        "id": 15100285,
-        "code": "15100285",
-        "package_length": 45,
-        "package_width": 35,
-        "package_height": 30,
-        "package_weight": 12.0
+        "id": 15013726,
+        "code": "15013726",
+        "package_length": 40,
+        "package_width": 30,
+        "package_height": 25,
+        "package_weight": 10,
+        "package_in_unit": 500,
+        "package_max_stack_weight": 200,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 12,
+        "unit_weight": 1.003,
+        "units_per_layer": null
       },
-      "package_quantity": 80,
-      "quantity": 80,
-      "package_id": "15100285"
-    },
-    {
-      "product": {
-        "id": 21111752,
-        "code": "21111752",
-        "package_length": 50,
-        "package_width": 40,
-        "package_height": 35,
-        "package_weight": 15.0
-      },
-      "package_quantity": 58,
-      "quantity": 58,
-      "package_id": "21111752"
+      "package_quantity": 65,
+      "package_id": "T-15013726-B",
+      "quantity": 1300,
+      "unit_id": "KG"
     },
     {
       "product": {
@@ -53,89 +58,218 @@
         "package_length": 35,
         "package_width": 25,
         "package_height": 20,
-        "package_weight": 7.5
+        "package_weight": 7.5,
+        "package_in_unit": 160,
+        "package_max_stack_weight": 180,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 12,
+        "unit_weight": 1.044,
+        "units_per_layer": null
       },
-      "package_quantity": 232,
-      "quantity": 232,
-      "package_id": "67054510"
+      "package_quantity": 120,
+      "package_id": "T-67054510-A",
+      "quantity": 960,
+      "unit_id": "KG"
+    },
+    {
+      "product": {
+        "id": 67054510,
+        "code": "67054510",
+        "package_length": 35,
+        "package_width": 25,
+        "package_height": 20,
+        "package_weight": 7.5,
+        "package_in_unit": 160,
+        "package_max_stack_weight": 180,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 12,
+        "unit_weight": 1.044,
+        "units_per_layer": null
+      },
+      "package_quantity": 112,
+      "package_id": "T-67054510-B",
+      "quantity": 896,
+      "unit_id": "KG"
+    },
+    {
+      "product": {
+        "id": 15100285,
+        "code": "15100285",
+        "package_length": 45,
+        "package_width": 35,
+        "package_height": 30,
+        "package_weight": 12,
+        "package_in_unit": 1000,
+        "package_max_stack_weight": 250,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 12,
+        "unit_weight": 1.040,
+        "units_per_layer": null
+      },
+      "package_quantity": 18,
+      "package_id": "T-15100285-A",
+      "quantity": 216,
+      "unit_id": "KG"
+    },
+    {
+      "product": {
+        "id": 21111752,
+        "code": "21111752",
+        "package_length": 50,
+        "package_width": 40,
+        "package_height": 35,
+        "package_weight": 15,
+        "package_in_unit": 500,
+        "package_max_stack_weight": 280,
+        "packages_per_layer": null,
+        "unit_length": 11,
+        "unit_width": 10,
+        "unit_height": 12,
+        "unit_weight": 1.003,
+        "units_per_layer": null
+      },
+      "package_quantity": 12,
+      "package_id": "T-21111752-A",
+      "quantity": 180,
+      "unit_id": "KG"
     },
     {
       "product": {
         "id": 99001,
         "code": "99001",
+        "package_length": 25,
+        "package_width": 20,
+        "package_height": 15,
+        "package_weight": 1.2,
+        "package_in_unit": 50,
+        "package_max_stack_weight": 80,
+        "packages_per_layer": null,
         "unit_length": 25,
         "unit_width": 20,
         "unit_height": 15,
-        "unit_weight": 1.2
+        "unit_weight": 1.2,
+        "units_per_layer": null
       },
       "package_quantity": null,
-      "quantity": 93,
-      "package_id": "99001"
+      "package_id": "T-99001",
+      "quantity": 28,
+      "unit_id": "ADET"
     },
     {
       "product": {
         "id": 99002,
         "code": "99002",
+        "package_length": 30,
+        "package_width": 22,
+        "package_height": 18,
+        "package_weight": 1.8,
+        "package_in_unit": 40,
+        "package_max_stack_weight": 90,
+        "packages_per_layer": null,
         "unit_length": 30,
         "unit_width": 22,
         "unit_height": 18,
-        "unit_weight": 1.8
+        "unit_weight": 1.8,
+        "units_per_layer": null
       },
       "package_quantity": null,
-      "quantity": 65,
-      "package_id": "99002"
+      "package_id": "T-99002",
+      "quantity": 22,
+      "unit_id": "ADET"
     },
     {
       "product": {
         "id": 99003,
         "code": "99003",
+        "package_length": 20,
+        "package_width": 15,
+        "package_height": 12,
+        "package_weight": 0.8,
+        "package_in_unit": 60,
+        "package_max_stack_weight": 70,
+        "packages_per_layer": null,
         "unit_length": 20,
         "unit_width": 15,
         "unit_height": 12,
-        "unit_weight": 0.8
+        "unit_weight": 0.8,
+        "units_per_layer": null
       },
       "package_quantity": null,
-      "quantity": 162,
-      "package_id": "99003"
+      "package_id": "T-99003",
+      "quantity": 35,
+      "unit_id": "ADET"
     },
     {
       "product": {
         "id": 99004,
         "code": "99004",
+        "package_length": 28,
+        "package_width": 20,
+        "package_height": 20,
+        "package_weight": 1.5,
+        "package_in_unit": 45,
+        "package_max_stack_weight": 85,
+        "packages_per_layer": null,
         "unit_length": 28,
         "unit_width": 20,
         "unit_height": 20,
-        "unit_weight": 1.5
+        "unit_weight": 1.5,
+        "units_per_layer": null
       },
       "package_quantity": null,
-      "quantity": 59,
-      "package_id": "99004"
+      "package_id": "T-99004",
+      "quantity": 18,
+      "unit_id": "ADET"
     },
     {
       "product": {
         "id": 99005,
         "code": "99005",
+        "package_length": 22,
+        "package_width": 18,
+        "package_height": 15,
+        "package_weight": 1.1,
+        "package_in_unit": 55,
+        "package_max_stack_weight": 75,
+        "packages_per_layer": null,
         "unit_length": 22,
         "unit_width": 18,
         "unit_height": 15,
-        "unit_weight": 1.1
+        "unit_weight": 1.1,
+        "units_per_layer": null
       },
       "package_quantity": null,
-      "quantity": 105,
-      "package_id": "99005"
+      "package_id": "T-99005",
+      "quantity": 25,
+      "unit_id": "ADET"
     },
     {
       "product": {
         "id": 99006,
         "code": "99006",
+        "package_length": 18,
+        "package_width": 14,
+        "package_height": 10,
+        "package_weight": 0.6,
+        "package_in_unit": 70,
+        "package_max_stack_weight": 60,
+        "packages_per_layer": null,
         "unit_length": 18,
         "unit_width": 14,
         "unit_height": 10,
-        "unit_weight": 0.6
+        "unit_weight": 0.6,
+        "units_per_layer": null
       },
       "package_quantity": null,
-      "quantity": 216,
-      "package_id": "99006"
+      "package_id": "T-99006",
+      "quantity": 30,
+      "unit_id": "ADET"
     }
   ]
 }
