@@ -1,5 +1,7 @@
 """Single palet yerleştirme servisi (Django entegrasyonu)."""
 
+import logging
+
 from src.core.single_pallet import (
     simulate_single_pallet,
     generate_grid_placement,
@@ -11,15 +13,16 @@ from .converters import django_urun_to_urundata, container_info_to_config
 from ._palet_builder import create_django_palet
 
 
+logger = logging.getLogger(__name__)
+
+
 def single_palet_yerlestirme(urunler, container_info, optimization=None):
-    """
-    Single Palet sürecini yöneten ana fonksiyon.
-    Django modelleriyle çalışır, src/ algoritmasını kullanır.
+    """Single palet pipeline; Django modelleriyle çalışır, src/ algoritmasını kullanır.
 
     Returns:
         tuple: (single_pallets, yerlesmemis_urunler)
     """
-    print("--- Single Palet Operasyonu Başlıyor ---")
+    logger.info("Single palet operasyonu başlıyor")
 
     palet_cfg = container_info_to_config(container_info)
 
@@ -35,7 +38,7 @@ def single_palet_yerlestirme(urunler, container_info, optimization=None):
         urun_kodu = key[0]
         total_qty = len(group_items)
 
-        print(f"Grup İnceleniyor: {urun_kodu}, Adet: {total_qty}")
+        logger.debug("Grup inceleniyor: %s, adet=%d", urun_kodu, total_qty)
 
         sim_result = simulate_single_pallet(group_items, palet_cfg)
 
@@ -51,25 +54,23 @@ def single_palet_yerlestirme(urunler, container_info, optimization=None):
                 remainder_fill_ratio = (remainder * item_volume) / pallet_volume if remainder > 0 else 0
                 create_partial = (remainder_fill_ratio >= DEFAULT_SINGLE_THRESHOLD)
 
-                print(f"  -> ONAYLANDI. {sim_result['reason']}")
-                print(f"  -> Efficiency: {efficiency*100:.1f}% | Capacity: {capacity} items/pallet")
-                print(f"  -> Stock: {total_qty} → {num_full_pallets} full pallet(s)")
-
-                if remainder > 0:
-                    if create_partial:
-                        print(f"  -> + 1 partial pallet ({remainder} items, fill: {remainder_fill_ratio*100:.1f}%)")
-                    else:
-                        print(f"  -> {remainder} remainder items -> Mix Pool")
+                logger.info(
+                    "Single onaylandı: %s eff=%.1f%% cap=%d full=%d remainder=%d",
+                    urun_kodu, efficiency * 100, capacity, num_full_pallets, remainder,
+                )
+                if remainder > 0 and not create_partial:
+                    logger.info("Single %s: remainder %d -> mix pool", urun_kodu, remainder)
             else:
                 num_full_pallets = 0
                 remainder = total_qty
                 partial_fill_ratio = (remainder * item_volume) / pallet_volume
                 create_partial = (partial_fill_ratio >= DEFAULT_SINGLE_THRESHOLD)
 
-                if create_partial:
-                    print(f"  -> ONAYLANDI (Partial). Fill: {partial_fill_ratio*100:.1f}%")
-                else:
-                    print(f"  -> REJECTED. Fill: {partial_fill_ratio*100:.1f}% < {DEFAULT_SINGLE_THRESHOLD:.0%}")
+                if not create_partial:
+                    logger.info(
+                        "Single reddedildi: %s fill=%.1f%% < %.0f%%",
+                        urun_kodu, partial_fill_ratio * 100, DEFAULT_SINGLE_THRESHOLD * 100,
+                    )
                     mix_pool.extend(group_items)
                     continue
 
@@ -95,12 +96,14 @@ def single_palet_yerlestirme(urunler, container_info, optimization=None):
             elif remainder > 0:
                 leftovers = group_items[-remainder:]
                 mix_pool.extend(leftovers)
-                print(f"  -> {remainder} items sent to Mix Pool")
         else:
-            print(f"  -> REDDEDILDI. {sim_result['reason']}")
+            logger.info("Single reddedildi: %s — %s", urun_kodu, sim_result["reason"])
             mix_pool.extend(group_items)
 
-    print(f"--- Single Bitti. {len(single_pallets)} palet. Mix Havuzu: {len(mix_pool)} ürün. ---")
+    logger.info(
+        "Single tamamlandı: %d palet, mix havuzu: %d ürün",
+        len(single_pallets), len(mix_pool),
+    )
 
     yerlesmemis_urunler = []
     for item in mix_pool:

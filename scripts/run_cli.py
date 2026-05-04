@@ -22,11 +22,9 @@ import time
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-from src.models import PaletConfig, UrunData
 from src.utils.parser import parse_json_input, load_json_file
 from src.utils.helpers import urun_hacmi, group_products_smart
 from src.core.single_pallet import simulate_single_pallet, generate_grid_placement
-from src.core.mix_pallet import mix_palet_yerlestirme_main
 from src.core.packing import pack_maximal_rectangles
 from src.core.genetic_algorithm import run_ga
 from src.utils.visualization import render_pallet_3d

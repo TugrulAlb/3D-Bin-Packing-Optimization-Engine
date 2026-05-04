@@ -1,20 +1,22 @@
-"""
-Django settings for core project.
-"""
+"""Django settings for core project."""
 
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get(
-    'SECRET_KEY',
-    'django-insecure-palet-yerlestirme-projesi-secret-key-123456789'
-)
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+_DEFAULT_DEV_SECRET = 'django-insecure-palet-yerlestirme-projesi-secret-key-123456789'
+SECRET_KEY = os.environ.get('SECRET_KEY', _DEFAULT_DEV_SECRET if DEBUG else '')
+if not SECRET_KEY:
+    raise ImproperlyConfigured("SECRET_KEY env var must be set when DEBUG=False")
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '').split(',') if h.strip()]
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ImproperlyConfigured("ALLOWED_HOSTS env var must be set when DEBUG=False")
 
 INSTALLED_APPS = [
     'django.contrib.auth',
@@ -146,3 +148,29 @@ def _load_api_keys():
 
 API_KEYS = _load_api_keys()
 API_MAX_CONCURRENT_JOBS = int(os.environ.get('API_MAX_CONCURRENT_JOBS', '4'))
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '[{asctime}] {levelname} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': os.environ.get('LOG_LEVEL', 'INFO'),
+    },
+    'loggers': {
+        'django': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'palet_app': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'api': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+    },
+}
