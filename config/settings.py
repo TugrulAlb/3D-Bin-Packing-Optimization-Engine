@@ -24,7 +24,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'crispy_forms',
     'crispy_tailwind',
+    'rest_framework',
     'palet_app',
+    'api',
 ]
 
 MIDDLEWARE = [
@@ -94,3 +96,53 @@ FILE_UPLOAD_HANDLERS = [
     'django.core.files.uploadhandler.MemoryFileUploadHandler',
     'django.core.files.uploadhandler.TemporaryFileUploadHandler',
 ]
+
+# REST API
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('DATA_UPLOAD_MAX_MEMORY_SIZE', 10 * 1024 * 1024))  # 10MB
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'api.authentication.ApiKeyAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    ),
+    'DEFAULT_PARSER_CLASSES': (
+        'rest_framework.parsers.JSONParser',
+    ),
+    'EXCEPTION_HANDLER': 'api.exceptions.api_exception_handler',
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.ScopedRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'submit': os.environ.get('API_THROTTLE_SUBMIT', '60/min'),
+        'status': os.environ.get('API_THROTTLE_STATUS', '600/min'),
+        'result': os.environ.get('API_THROTTLE_RESULT', '120/min'),
+        'cancel': os.environ.get('API_THROTTLE_CANCEL', '60/min'),
+    },
+    'UNAUTHENTICATED_USER': None,
+    'UNAUTHENTICATED_TOKEN': None,
+}
+
+# Comma separated "label:key,label2:key2" — env var: DAYFRAME_API_KEYS
+def _load_api_keys():
+    raw = os.environ.get('DAYFRAME_API_KEYS', '').strip()
+    if not raw:
+        return {}
+    out = {}
+    for pair in raw.split(','):
+        if ':' not in pair:
+            continue
+        label, key = pair.split(':', 1)
+        label = label.strip()
+        key = key.strip()
+        if label and key:
+            out[label] = key
+    return out
+
+
+API_KEYS = _load_api_keys()
+API_MAX_CONCURRENT_JOBS = int(os.environ.get('API_MAX_CONCURRENT_JOBS', '4'))
