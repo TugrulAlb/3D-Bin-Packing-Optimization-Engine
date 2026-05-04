@@ -11,6 +11,7 @@ from .single import single_palet_yerlestirme
 from .mix import chromosome_to_palets, mix_palet_data_to_django
 from .merge import merge_repack_service, merge_repack_mix_service
 from .visualization import palet_gorsellestir, ozet_grafikler_olustur
+from .json_parser import parse_optimization_payload
 
 __all__ = [
     "django_urun_to_urundata",
@@ -22,4 +23,5 @@ __all__ = [
     "merge_repack_mix_service",
     "palet_gorsellestir",
     "ozet_grafikler_olustur",
+    "parse_optimization_payload",
 ]
