@@ -39,7 +39,7 @@ class HealthView(APIView):
     def get(self, request):
         return Response({
             "status": "ok",
-            "service": "dayframe-bin-packing",
+            "service": "bin-packing-engine",
             "version": "1.0.0",
             "time": timezone.now().isoformat(),
         })

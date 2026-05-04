@@ -10,7 +10,7 @@ Tek başına çalışır; mevcut web UI'dan bağımsızdır, aynı algoritma mot
 pip install djangorestframework
 
 # 2) API key tanımla (label:key,label2:key2)
-$env:DAYFRAME_API_KEYS = "musteri1:cok-gizli-anahtar-32byte"
+$env:BINPACK_API_KEYS = "musteri1:cok-gizli-anahtar-32byte"
 
 # 3) (Opsiyonel) eşzamanlı iş limiti
 $env:API_MAX_CONCURRENT_JOBS = "4"

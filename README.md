@@ -310,7 +310,7 @@ The application supports the following environment variables (see `.env.example`
 | `DEBUG` | Enable debug mode | `False` |
 | `ALLOWED_HOSTS` | Comma-separated allowed hosts (required when `DEBUG=False`) | _empty_ |
 | `LOG_LEVEL` | Root logger level | `INFO` |
-| `DAYFRAME_API_KEYS` | REST API keys, format `label:key,label2:key2` | _empty_ |
+| `BINPACK_API_KEYS` | REST API keys, format `label:key,label2:key2` | _empty_ |
 | `API_MAX_CONCURRENT_JOBS` | Concurrent optimization jobs cap | `4` |
 | `API_THROTTLE_SUBMIT` | Rate for `POST /optimize/` | `60/min` |
 | `API_THROTTLE_STATUS` | Rate for status polling | `600/min` |
@@ -335,7 +335,7 @@ A REST API is exposed under `/api/v1/` for external integrations. Endpoints:
 | `GET` | `/api/v1/optimize/{id}/result/` | Fetch palet positions + summary |
 | `POST` | `/api/v1/optimize/{id}/cancel/` | Cancel running job |
 
-Authentication: send `X-API-Key: <key>` header. Configure keys via `DAYFRAME_API_KEYS` env var. Full contract and Python/curl examples in [docs/API.md](docs/API.md).
+Authentication: send `X-API-Key: <key>` header. Configure keys via `BINPACK_API_KEYS` env var. Full contract and Python/curl examples in [docs/API.md](docs/API.md).
 
 ## 📊 Running Optimization Algorithms
 

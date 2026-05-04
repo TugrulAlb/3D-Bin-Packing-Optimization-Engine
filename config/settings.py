@@ -7,6 +7,12 @@ from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / '.env')
+except ImportError:
+    pass
+
 DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 _DEFAULT_DEV_SECRET = 'django-insecure-palet-yerlestirme-projesi-secret-key-123456789'
@@ -129,9 +135,9 @@ REST_FRAMEWORK = {
     'UNAUTHENTICATED_TOKEN': None,
 }
 
-# Comma separated "label:key,label2:key2" — env var: DAYFRAME_API_KEYS
+# Comma separated "label:key,label2:key2" — env var: BINPACK_API_KEYS
 def _load_api_keys():
-    raw = os.environ.get('DAYFRAME_API_KEYS', '').strip()
+    raw = os.environ.get('BINPACK_API_KEYS', '').strip()
     if not raw:
         return {}
     out = {}
