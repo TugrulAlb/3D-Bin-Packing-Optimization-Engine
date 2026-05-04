@@ -175,24 +175,28 @@ The web UI includes a built-in **"Toplu Test"** (bulk test) page that runs all t
 │       ├── helpers.py             # Helper functions
 │       └── visualization.py       # 3D visualization
 │
-├── palet_app/                     # Django application
-│   ├── models/
-│   │   ├── palet.py               # Pallet ORM model
-│   │   ├── urun.py                # Product ORM model
-│   │   └── optimization.py        # Optimization results
-│   ├── views.py                   # Django views
-│   ├── urls.py                    # URL routing
-│   ├── services.py                # Business logic layer
+├── palet_app/                     # Django application (web UI)
+│   ├── models/                    # Pallet, Urun, Optimization ORM
+│   ├── views/                     # HTTP views (split by feature)
+│   ├── services/                  # Business logic bridge to src/core
+│   ├── workers/                   # Threaded optimization worker
 │   └── templates/                 # HTML templates
 │
-├── core/                          # Django project config
+├── api/                           # REST API (DRF)
+│   ├── authentication.py          # X-API-Key auth
+│   ├── serializers.py             # Input/output schemas
+│   ├── services.py                # Job orchestration
+│   ├── views.py                   # REST endpoints
+│   └── urls.py                    # /api/v1/ routing
+│
+├── config/                        # Django project config
 │   ├── settings.py                # Django settings
 │   ├── urls.py                    # URL configuration
 │   └── wsgi.py                    # WSGI entry point
 │
 ├── data/samples/                  # Test JSON files
-├── output/                        # Output directory (images, reports)
-├── templates/                     # Base HTML templates
+├── docs/                          # Documentation (API.md, assets)
+├── output/                        # CLI output (images, reports)
 ├── scripts/run_cli.py             # Standalone CLI entry point
 ├── manage.py                      # Django management
 ├── requirements.txt               # Python dependencies
@@ -302,14 +306,36 @@ The application supports the following environment variables (see `.env.example`
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SECRET_KEY` | Django secret key (required for production) | Development key |
-| `DEBUG` | Enable debug mode | `True` |
-| `ALLOWED_HOSTS` | Comma-separated allowed hosts | `localhost,127.0.0.1` |
-| `DEBUG_SUPPORT` | Enable detailed support constraint logging | `0` |
+| `SECRET_KEY` | Django secret key (required when `DEBUG=False`) | dev fallback |
+| `DEBUG` | Enable debug mode | `False` |
+| `ALLOWED_HOSTS` | Comma-separated allowed hosts (required when `DEBUG=False`) | _empty_ |
+| `LOG_LEVEL` | Root logger level | `INFO` |
+| `DAYFRAME_API_KEYS` | REST API keys, format `label:key,label2:key2` | _empty_ |
+| `API_MAX_CONCURRENT_JOBS` | Concurrent optimization jobs cap | `4` |
+| `API_THROTTLE_SUBMIT` | Rate for `POST /optimize/` | `60/min` |
+| `API_THROTTLE_STATUS` | Rate for status polling | `600/min` |
+| `API_THROTTLE_RESULT` | Rate for result fetch | `120/min` |
+| `API_THROTTLE_CANCEL` | Rate for cancel | `60/min` |
+| `DATA_UPLOAD_MAX_MEMORY_SIZE` | Max request body bytes | `10485760` |
+| `DEBUG_SUPPORT` | Detailed support constraint logging | `0` |
 | `MEDIA_ROOT` | Media files directory | `media` |
 | `STATIC_ROOT` | Static files directory | `staticfiles` |
 
-**Security Note**: Never commit `.env` with real secrets to version control!
+**Security**: Never commit `.env` to version control. In production, set `DEBUG=False`, a 50-character random `SECRET_KEY`, and an explicit `ALLOWED_HOSTS` list.
+
+### REST API
+
+A REST API is exposed under `/api/v1/` for external integrations. Endpoints:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/v1/health/` | Liveness probe (no auth) |
+| `POST` | `/api/v1/optimize/` | Submit optimization, returns `job_id` |
+| `GET` | `/api/v1/optimize/{id}/status/` | Poll progress |
+| `GET` | `/api/v1/optimize/{id}/result/` | Fetch palet positions + summary |
+| `POST` | `/api/v1/optimize/{id}/cancel/` | Cancel running job |
+
+Authentication: send `X-API-Key: <key>` header. Configure keys via `DAYFRAME_API_KEYS` env var. Full contract and Python/curl examples in [docs/API.md](docs/API.md).
 
 ## 📊 Running Optimization Algorithms
 
@@ -364,16 +390,20 @@ print(f"Greedy pallets: {len(greedy_pallets)}")
 
 ## 🧪 Testing & Validation
 
-This repository currently does not include a dedicated automated test suite (`tests/` folder).
-
-Recommended validation workflow:
+API contract and parser regression tests live under `api/tests.py`:
 
 ```bash
-# Run a sample optimization
+DEBUG=True python manage.py test api
+```
+
+End-to-end algorithm runs are validated manually:
+
+```bash
+# CLI run on a sample dataset
 python scripts/run_cli.py data/samples/0114.json
 
 # Compare GA vs DE vs Greedy in the web UI
-python manage.py runserver
+DEBUG=True python manage.py runserver
 # → upload JSON, then click "Toplu Test (3 Algoritma)" on the product list page
 ```
 
