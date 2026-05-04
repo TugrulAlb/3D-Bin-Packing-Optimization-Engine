@@ -1,0 +1,31 @@
+[run]
+source = palet_app, api
+branch = True
+omit =
+    */migrations/*
+    */tests/*
+    */__pycache__/*
+    manage.py
+    config/wsgi.py
+    config/asgi.py
+    palet_app/services/visualization.py
+    palet_app/services/single.py
+    palet_app/services/mix.py
+    palet_app/services/merge.py
+    palet_app/services/_palet_builder.py
+    palet_app/services/converters.py
+    palet_app/workers/optimization_worker.py
+    palet_app/views/*
+    palet_app/apps.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+show_missing = True
+fail_under = 80
+
+[html]
+directory = htmlcov

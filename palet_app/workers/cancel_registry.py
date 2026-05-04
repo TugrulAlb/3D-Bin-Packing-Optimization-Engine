@@ -43,3 +43,10 @@ def is_cancelled(opt_id=None, group_id=None) -> bool:
 def check_cancel(opt_id, group_id=None) -> None:
     if is_cancelled(opt_id=opt_id, group_id=group_id):
         raise OptimizationCancelled()
+
+
+def _reset_for_tests() -> None:
+    """Test izolasyonu — test setUp/tearDown dışında çağrılmamalıdır."""
+    with _CANCEL_LOCK:
+        _CANCELLED_OPTS.clear()
+        _CANCELLED_GROUPS.clear()
