@@ -11,14 +11,14 @@ import time
 from ..models import PHASE_RANGES
 
 
-def phase_progress(durum, completed: bool = False, error: bool = False):
-    """
-    - Her fazın PHASE_RANGES içinde (start, end, label) değeri vardır.
-    - Faza girildiğinde yüzde = start; fazın tahmini süresi boyunca
-      ease-out (1 - e^(-t/tau)) eğrisiyle (end - 1)'e yaklaşır.
-    - Asla end'e ulaşmaz; bir sonraki set_phase() ile yüzde start'a çıkar.
-    - completed=True → 100. error → mevcut yüzde korunur (kırmızı bar).
-    - Monotonluk garantisi: durum['last_pct'] ile yüzde asla geri gitmez.
+def phase_progress(durum, completed: bool = False, error: bool = False, *, time_func=time.time):
+    """Faz tabanlı ease-out ilerleme yüzdesi.
+
+    - PHASE_RANGES içindeki (start, end, label) kullanılır.
+    - Faza girildiğinde yüzde = start; tahmini süre boyunca (end - 1)'e yaklaşır.
+    - completed=True → 100. error → mevcut yüzde korunur.
+    - durum['last_pct'] ile geri gitmez.
+    - ``time_func`` test enjeksiyonu içindir; varsayılan ``time.time``.
     """
     if completed:
         return 100, 'Tamamlandı'
@@ -32,10 +32,11 @@ def phase_progress(durum, completed: bool = False, error: bool = False):
     start, end, label = PHASE_RANGES[phase]
     start = float(start)
     end = float(end)
-    span = max(0.0, end - start - 1.0)  # end'e asla dokunmasın
+    span = max(0.0, end - start - 1.0)
 
     expected = max(0.5, float(durum.get('phase_expected_sec', 5.0)))
-    elapsed = max(0.0, time.time() - float(durum.get('phase_start', time.time())))
+    now = time_func()
+    elapsed = max(0.0, now - float(durum.get('phase_start', now)))
     tau = expected / 3.0  # ~3*tau sonunda %95 doygunluk
 
     k = 1.0 - math.exp(-elapsed / tau) if tau > 0 else 1.0
