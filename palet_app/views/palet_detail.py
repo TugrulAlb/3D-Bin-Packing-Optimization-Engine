@@ -1,10 +1,15 @@
 """Palet detay ve 3D veri endpoint'leri."""
 
+import logging
+
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect, get_object_or_404
 
 from ..models import Urun, Palet, Optimization
 from src.utils.visualization import renk_uret
+
+
+logger = logging.getLogger(__name__)
 
 
 def palet_detail(request, palet_id):
@@ -31,7 +36,7 @@ def palet_detail(request, palet_id):
         urun_konumlari = palet.json_to_dict(palet.urun_konumlari)
         urun_boyutlari = palet.json_to_dict(palet.urun_boyutlari)
 
-        urun_ids = [int(id) for id in urun_konumlari.keys()]
+        urun_ids = [int(uid) for uid in urun_konumlari.keys()]
         urunler = list(Urun.objects.filter(id__in=urun_ids))
 
         urun_renkleri = {}
@@ -69,8 +74,9 @@ def palet_detail(request, palet_id):
 
         return render(request, 'palet_app/palet_detail.html', context)
 
-    except Exception as e:
-        return HttpResponseBadRequest(f"Hata: {str(e)}")
+    except Exception:
+        logger.exception("palet_detail render hatası (palet_id=%s)", palet_id)
+        return HttpResponseBadRequest("Palet detayı yüklenemedi.")
 
 
 def palet_3d_data(request, palet_id):
@@ -95,7 +101,7 @@ def palet_3d_data(request, palet_id):
 
         urun_konumlari = palet.json_to_dict(palet.urun_konumlari)
         urun_boyutlari = palet.json_to_dict(palet.urun_boyutlari)
-        urun_ids = [int(id) for id in urun_konumlari.keys()]
+        urun_ids = [int(uid) for uid in urun_konumlari.keys()]
         urunler = {urun.id: urun for urun in Urun.objects.filter(id__in=urun_ids)}
 
         for urun_id_str, konum in urun_konumlari.items():
@@ -127,5 +133,6 @@ def palet_3d_data(request, palet_id):
 
         return JsonResponse(palet_data)
 
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    except Exception:
+        logger.exception("palet_3d_data hatası (palet_id=%s)", palet_id)
+        return JsonResponse({'error': 'Palet 3D verisi alınamadı.'}, status=500)

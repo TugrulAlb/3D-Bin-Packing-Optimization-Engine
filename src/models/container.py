@@ -1,21 +1,8 @@
-"""
-Konteyner / Palet Konfigürasyon Modeli
-=======================================
-
-3D Bin Packing probleminde konteyner (palet) parametrelerini tanımlar.
-"""
+"""Konteyner / palet konfigürasyon modeli."""
 
 
 class PaletConfig:
-    """
-    Palet parametreleri.
-    
-    Attributes:
-        length (float): Palet uzunluğu (cm) - X ekseni
-        width (float):  Palet genişliği (cm) - Y ekseni
-        height (float): Palet yüksekliği (cm) - Z ekseni
-        max_weight (float): Maksimum taşıma kapasitesi (kg)
-    """
+    """Palet parametreleri (cm, kg)."""
     
     def __init__(self, length, width, height, max_weight):
         self.length = float(length)

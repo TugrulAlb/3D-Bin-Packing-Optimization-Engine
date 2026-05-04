@@ -21,9 +21,6 @@ from ..utils.helpers import possible_orientations_for
 logger = logging.getLogger(__name__)
 
 
-# ====================================================================
-# LAYER SNAPPING KONFİGÜRASYONU  (Amazon-like gerçekçilik)
-# ====================================================================
 # Z_GRID: Katman hizalaması için grid adımı (cm).
 # Ürünlerin z konumları bu değerin katlarına yuvarlanır (mümkünse).
 # Düşürüldükçe daha hassas katman hizalaması sağlar (ama daha yavaş değil).
@@ -173,9 +170,6 @@ def snap_to_layer_z(placed_z: float, layer_map: dict) -> float:
     return placed_z
 
 
-# ====================================================================
-# GRAVITY / STABILITY CONSTRAINT
-# ====================================================================
 
 def compute_support_ratio(
     candidate_x: float,
@@ -259,9 +253,6 @@ def compute_support_ratio(
     return support_ratio
 
 
-# ====================================================================
-# VERİ YAPILARI
-# ====================================================================
 
 class FreeRectangle:
     """
@@ -447,9 +438,6 @@ def remove_redundant_rectangles(rects):
     return filtered
 
 
-# ====================================================================
-# COMPACTION & LOCAL REPAIR
-# ====================================================================
 
 def _items_overlap_3d(ax, ay, az, al, aw, ah,
                       bx, by, bz, bl, bw, bh, tol=1e-6):
@@ -926,9 +914,6 @@ def pack_maximal_rectangles(urunler, palet_cfg, min_support_ratio=0.40, debug_su
     return pallets
 
 
-# ====================================================================
-# SHELF-BASED PACKING (Legacy Destek)
-# ====================================================================
 
 def pack_shelf_based(urunler, rot_gen, palet_cfg, min_support_ratio=0.40, debug_support=False):
     """
@@ -1075,9 +1060,6 @@ def basit_palet_paketleme(chromosome, palet_cfg, min_support_ratio=0.40, debug_s
     return result
 
 
-# ====================================================================
-# MERGE & REPACK  –  Post-optimizasyon palet birleştirme
-# ====================================================================
 
 def _rebuild_pallet_state(pallet, palet_cfg):
     """

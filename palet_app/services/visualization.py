@@ -8,17 +8,7 @@ from ..models import Palet
 
 
 def palet_gorsellestir(palet, urunler, save_to_file=True):
-    """
-    Matplotlib ile 3D palet görselleştirme (Django entegrasyonu).
-
-    Args:
-        palet: Django Palet modeli
-        urunler: Django Urun queryset
-        save_to_file: True ise ContentFile döndürür
-
-    Returns:
-        ContentFile veya BytesIO
-    """
+    """3D palet görselini üretir; ``save_to_file`` True ise ContentFile döner."""
     PL, PW, PH = palet.boy, palet.en, palet.max_yukseklik
 
     urun_konumlari = palet.json_to_dict(palet.urun_konumlari)
@@ -57,7 +47,7 @@ def palet_gorsellestir(palet, urunler, save_to_file=True):
 
 
 def ozet_grafikler_olustur(optimization):
-    """Özet grafikler oluşturur - Plotly ile interaktif HTML."""
+    """Plotly ile pie + bar grafikleri üretir, palet sayılarını günceller."""
     paletler = Palet.objects.filter(optimization=optimization)
     single = paletler.filter(palet_turu='single').count()
     mix = paletler.filter(palet_turu='mix').count()

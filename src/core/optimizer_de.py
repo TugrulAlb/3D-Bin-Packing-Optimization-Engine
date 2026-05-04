@@ -1,19 +1,7 @@
-"""
-Advanced Differential Evolution (DE) Optimizer for 3D Bin Packing
-===================================================================
+"""Differential Evolution optimizer for 3D bin packing.
 
-Senior Research Scientist in Optimization implementation.
-
-Strategy: DE/current-to-best/1 with adaptive jitter, fitness caching, 
+Strategy: DE/current-to-best/1 with adaptive jitter, fitness caching,
 two-stage decode, elite repair, and volume-biased initialization.
-
-Key Features:
-    1. DE/current-to-best/1 mutation with jitter
-    2. Split crossover (CR_p for priority, CR_r for rotation if exists)
-    3. Fitness caching to avoid redundant packing evaluations
-    4. Two-stage decode: cheap volume bound check before full packing
-    5. Elite repair: local search on top performers every 5 iterations
-    6. Biased initialization: volume-descending rank bias
 
 References:
     - Storn & Price, "Differential Evolution – A Simple and Efficient Heuristic" (1997)
@@ -61,9 +49,6 @@ from .fitness import get_weights
 DEBUG_SUPPORT = os.getenv("DEBUG_SUPPORT") == "1"
 from ..utils.helpers import urun_hacmi
 
-# ====================================================================
-# DE FITNESS CONSTANTS  (lexicographic priority order)
-# ====================================================================
 # BIG_PALLET dominates W_UTIL: 1 fewer pallet always beats any util gain.
 # Guarantee:  BIG_PALLET(50k) > W_UTIL(1k) * 1.0(max possible util)  ✓
 # Unplaced items are handled by the packing engine itself (pack_maximal_rectangles
@@ -75,9 +60,6 @@ from ..models.container import PaletConfig
 from ..models.product import UrunData
 
 
-# ====================================================================
-# DE INDIVIDUAL (CANDIDATE SOLUTION)
-# ====================================================================
 
 @dataclass
 class DEIndividual:
@@ -111,9 +93,6 @@ class DEIndividual:
         )
 
 
-# ====================================================================
-# FITNESS CACHING
-# ====================================================================
 
 class FitnessCache:
     """
@@ -156,9 +135,6 @@ class FitnessCache:
         return self.hits / total if total > 0 else 0.0
 
 
-# ====================================================================
-# DECODING & EVALUATION
-# ====================================================================
 
 def decode_to_order(priority_keys: np.ndarray) -> List[int]:
     """
@@ -172,7 +148,6 @@ def decode_to_order(priority_keys: np.ndarray) -> List[int]:
     Returns:
         List of item indices in order of decreasing priority
     """
-    # Argsort in descending order (highest priority first)
     return np.argsort(-priority_keys).tolist()
 
 
@@ -238,10 +213,8 @@ def evaluate_de_individual(
         cache: Fitness cache
         best_palet_count: Current best pallet count (for Stage A filtering)
     """
-    # Decode priority keys to order
     individual.decoded_order = decode_to_order(individual.priority_keys)
-    
-    # Check cache first
+
     cached = cache.get(individual)
     if cached is not None:
         individual.fitness, individual.palet_sayisi, individual.ortalama_doluluk = cached
@@ -328,13 +301,8 @@ def evaluate_de_individual(
     individual.palet_sayisi = P_GA
     individual.ortalama_doluluk = avg_doluluk
     
-    # Cache the result
     cache.put(individual, fitness_score, P_GA, avg_doluluk)
 
-
-# ====================================================================
-# BIASED INITIALIZATION
-# ====================================================================
 
 def create_biased_population(
     n_items: int,
@@ -385,9 +353,6 @@ def create_biased_population(
     return population
 
 
-# ====================================================================
-# DE MUTATION: HYBRID STRATEGY
-# ====================================================================
 
 def mutate_de_current_to_best(
     population: List[DEIndividual],
@@ -539,9 +504,6 @@ def hybrid_mutation(
         return mutate_de_rand_1(population, target_idx, bounds)
 
 
-# ====================================================================
-# SPLIT CROSSOVER
-# ====================================================================
 
 def crossover_split(
     target: DEIndividual,
@@ -591,9 +553,6 @@ def crossover_split(
     )
 
 
-# ====================================================================
-# ELITE REPAIR
-# ====================================================================
 
 def elite_repair(
     elite_individual: DEIndividual,
@@ -689,9 +648,6 @@ def apply_elite_repair_to_population(
             population[i] = repaired
 
 
-# ====================================================================
-# MAIN DE ALGORITHM
-# ====================================================================
 
 def run_de(
     urunler: List[UrunData],
@@ -944,9 +900,6 @@ def run_de(
     return best_individual, history
 
 
-# ====================================================================
-# UTILITY: CONVERT DE INDIVIDUAL TO CHROMOSOME (for compatibility)
-# ====================================================================
 
 def de_individual_to_chromosome(individual: DEIndividual, urunler: List[UrunData]):
     """
@@ -974,9 +927,6 @@ def de_individual_to_chromosome(individual: DEIndividual, urunler: List[UrunData
     return chromosome
 
 
-# ====================================================================
-# MAIN ENTRY POINT (API-compatible with GA)
-# ====================================================================
 
 def optimize_with_de(
     urunler: List[UrunData],

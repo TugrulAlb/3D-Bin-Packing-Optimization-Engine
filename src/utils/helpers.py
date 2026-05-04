@@ -1,9 +1,4 @@
-"""
-Yardımcı Fonksiyonlar
-======================
-
-Algoritma genelinde kullanılan yardımcı araçlar.
-"""
+"""Algoritma genelinde kullanılan yardımcı fonksiyonlar."""
 
 
 def urun_hacmi(urun) -> float:

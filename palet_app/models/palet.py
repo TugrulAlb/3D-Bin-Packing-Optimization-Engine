@@ -13,10 +13,9 @@ class Palet(models.Model):
 
     optimization = models.ForeignKey(Optimization, on_delete=models.CASCADE, related_name='paletler', verbose_name="Optimizasyon")
     palet_id = models.PositiveIntegerField(verbose_name="Palet ID")
-    palet_tipi = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Palet Tipi (kullanilmiyor, custom kullanilir)")
+    palet_tipi = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Palet Tipi (legacy)")
     palet_turu = models.CharField(max_length=10, choices=PALET_TURU_CHOICES, default='mix', verbose_name="Palet Türü")
 
-    # Dinamik palet boyutlari (JSON'dan gelen container bilgisi)
     custom_en = models.FloatField(null=True, blank=True, verbose_name="Özel En (cm)")
     custom_boy = models.FloatField(null=True, blank=True, verbose_name="Özel Boy (cm)")
     custom_max_yukseklik = models.FloatField(null=True, blank=True, verbose_name="Özel Max Yükseklik (cm)")
@@ -63,7 +62,6 @@ class Palet(models.Model):
         return 1250.0
 
     def hacim(self):
-        """doluluk_orani() tarafindan kullanilir."""
         return self.en * self.boy * self.max_yukseklik
 
     def doluluk_orani(self):

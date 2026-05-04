@@ -51,9 +51,6 @@ def _adaptive_ga_params(n_items: int) -> dict:
     }
 
 
-# ====================================================================
-# GENETİK OPERATÖRLER
-# ====================================================================
 
 def tournament_selection(population: List[Chromosome], k: int = 3) -> Chromosome:
     """K kişilik turnuva seçimi: en fit olan kazanır."""
@@ -101,9 +98,6 @@ def mutate(individual: Chromosome, mutation_rate: float = 0.05):
         )
 
 
-# ====================================================================
-# TOHUM (SEED) STRATEJİLERİ
-# ====================================================================
 
 def create_seeded_chromosome(urunler, seed_type='volume'):
     """
@@ -176,9 +170,6 @@ def create_height_sorted_chromosome(urunler):
     return Chromosome(urunler=urunler, sira_gen=sira_gen)
 
 
-# ====================================================================
-# ANA GA DÖNGÜSÜ
-# ====================================================================
 
 def run_ga(urunler, palet_cfg: PaletConfig, population_size=None, generations=None,
            elitism=None, mutation_rate=0.4, tournament_k=2):

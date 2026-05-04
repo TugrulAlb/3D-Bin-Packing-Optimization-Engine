@@ -38,7 +38,6 @@ def chromosome_to_palets(chromosome, palet_cfg, optimization, baslangic_id):
     for pallet_data in pallets:
         palet = create_django_palet(
             pallet_data['items'], palet_cfg, optimization, palet_id, 'mix',
-            items_are_dicts=True,
         )
         django_paletler.append(palet)
         palet_id += 1

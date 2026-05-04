@@ -1,15 +1,12 @@
-"""İç Django Palet nesnesi builder'ı — tüm servisler paylaşır."""
+"""Ortak Palet builder."""
 
 from ..models import Palet
 
 
-def create_django_palet(placements, palet_cfg, optimization, palet_id, palet_turu, items_are_dicts=False):
-    """
-    Yerleşim verilerinden Django Palet nesnesi oluşturur ve kaydeder.
+def create_django_palet(placements, palet_cfg, optimization, palet_id, palet_turu):
+    """Yerleşim listesinden Palet kaydı oluşturur.
 
-    ``items_are_dicts`` parametresi legacy API şeklini korur; iki yol da
-    aynı kodu çalıştırır (her iki çağrı yerinde de item'lar aynı şekilde
-    ``{'urun': ..., 'x':..., 'L':..., ...}`` dict'idir).
+    placements item formatı: ``{'urun': Urun, 'x', 'y', 'z', 'L', 'W', 'H'}``.
     """
     palet = Palet(
         optimization=optimization,

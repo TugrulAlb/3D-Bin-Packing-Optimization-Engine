@@ -2,7 +2,7 @@ from django.db import models
 
 
 class Urun(models.Model):
-    """Urun modeli; optimizasyon sirasinda DB'ye yazilir, algo src.utils.helpers ile hesaplar."""
+    """Optimizasyon başlatılırken kaydedilen ürün satırı."""
 
     urun_kodu = models.CharField(max_length=20, verbose_name="Ürün Kodu")
     urun_adi = models.CharField(max_length=100, verbose_name="Ürün Adı")

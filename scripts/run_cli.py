@@ -1,16 +1,8 @@
 #!/usr/bin/env python3
-"""
-3D Bin Packing Optimization - Ana Giriş Noktası
-=================================================
+"""Standalone CLI entry point for the optimization engine.
 
-Django'dan bağımsız olarak algoritmaları doğrudan çalıştırır.
-Test verileriyle hızlı deney yapmak için kullanılır.
-
-Kullanım:
-    python scripts/run_cli.py                          # Varsayılan test dosyası
-    python scripts/run_cli.py data/samples/0109.json   # Belirli dosya
-    python scripts/run_cli.py --algorithm greedy       # Greedy mod
-    python scripts/run_cli.py --algorithm genetic      # GA mod (varsayılan)
+Runs the algorithms directly without Django; useful for benchmarks and ad-hoc
+experiments on sample JSON files under data/samples/.
 """
 
 import sys
@@ -31,41 +23,31 @@ from src.utils.visualization import render_pallet_3d
 
 
 def run_optimization_standalone(json_path, algorithm='genetic', output_dir='output'):
-    """
-    Django olmadan tam optimizasyon çalıştırır.
-    
-    Args:
-        json_path: Girdi JSON dosya yolu
-        algorithm: 'genetic' veya 'greedy'
-        output_dir: Çıktı klasörü
-    """
+    """Run the full single+mix pipeline outside Django and write reports/images."""
     print("=" * 70)
     print("  3D BIN PACKING OPTIMIZATION ENGINE")
     print(f"  Algoritma: {algorithm.upper()}")
     print(f"  Girdi: {json_path}")
     print("=" * 70)
     
-    # 1. Veriyi yükle
     json_data = load_json_file(json_path)
     palet_cfg, all_products = parse_json_input(json_data)
-    
+
     print(f"\nKonteyner: {palet_cfg.length}x{palet_cfg.width}x{palet_cfg.height} cm")
     print(f"   Max Ağırlık: {palet_cfg.max_weight} kg")
     print(f"   Toplam Ürün: {len(all_products)}")
-    
-    # Toplam hacim analizi
+
     total_vol = sum(urun_hacmi(u) for u in all_products)
     theo_min = max(1, int(total_vol / palet_cfg.volume) + 1)
     print(f"   Toplam Hacim: {total_vol:,.0f} cm³")
     print(f"   Teorik Min. Palet: {theo_min}")
     
     start_time = time.time()
-    
-    # 2. Single Palet Analizi
+
     print("\n" + "=" * 50)
     print("  AŞAMA 1: SINGLE PALET ANALİZİ")
     print("=" * 50)
-    
+
     groups = group_products_smart(all_products)
     single_pallets = []
     mix_pool = []
@@ -93,7 +75,6 @@ def run_optimization_standalone(json_path, algorithm='genetic', output_dir='outp
                     'item_count': len(placements)
                 })
             
-            # Partial palet (>= %90)
             if remainder > 0:
                 partial_fill = (remainder * item_volume) / palet_cfg.volume
                 if partial_fill >= 0.90:
@@ -112,8 +93,7 @@ def run_optimization_standalone(json_path, algorithm='genetic', output_dir='outp
     
     print(f"\n  Single Paletler: {len(single_pallets)}")
     print(f"  Mix Havuzuna Kalan: {len(mix_pool)} ürün")
-    
-    # 3. Mix Palet
+
     mix_pallets = []
     if mix_pool:
         print("\n" + "=" * 50)
@@ -146,8 +126,7 @@ def run_optimization_standalone(json_path, algorithm='genetic', output_dir='outp
             })
     
     elapsed = time.time() - start_time
-    
-    # 4. Sonuç Raporu
+
     total_pallets = len(single_pallets) + len(mix_pallets)
     
     print("\n" + "=" * 70)
@@ -160,7 +139,6 @@ def run_optimization_standalone(json_path, algorithm='genetic', output_dir='outp
     print(f"  Süre:        {elapsed:.2f} saniye")
     print(f"  Algoritma:   {algorithm.upper()}")
     
-    # Doluluk oranları
     all_pallets = single_pallets + mix_pallets
     if all_pallets:
         fill_ratios = []
@@ -174,7 +152,6 @@ def run_optimization_standalone(json_path, algorithm='genetic', output_dir='outp
         print(f"  Min Doluluk:  %{min(fill_ratios):.1f}")
         print(f"  Max Doluluk:  %{max(fill_ratios):.1f}")
     
-    # 5. Görselleri kaydet
     os.makedirs(os.path.join(output_dir, 'images'), exist_ok=True)
     os.makedirs(os.path.join(output_dir, 'reports'), exist_ok=True)
     
@@ -196,7 +173,6 @@ def run_optimization_standalone(json_path, algorithm='genetic', output_dir='outp
             f.write(buf.read())
         print(f"  [IMG] {img_path}")
     
-    # JSON rapor
     report = {
         'input_file': json_path,
         'algorithm': algorithm,
@@ -245,10 +221,8 @@ def main():
                         help='Çıktı klasörü (varsayılan: <proje_koku>/output/)')
     
     args = parser.parse_args()
-    
-    # Girdi dosyası kontrolü
+
     if args.input is None:
-        # data/samples/ altındaki ilk JSON dosyasını bul
         samples_dir = os.path.join(PROJECT_ROOT, 'data', 'samples')
         if os.path.exists(samples_dir):
             json_files = sorted([f for f in os.listdir(samples_dir) if f.endswith('.json')])

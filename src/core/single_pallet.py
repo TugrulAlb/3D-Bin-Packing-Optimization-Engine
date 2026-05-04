@@ -1,19 +1,8 @@
-"""
-Single (Tek Tip) Palet Yerleştirme Algoritması
-=================================================
+"""Single (tek-tip) palet yerleştirme.
 
-Aynı boyuttaki ürünleri tek palete grid düzeninde yerleştirir.
-Adaptive threshold ile Single Palet onayı verir:
-  - Sabit %90 yerine, SKU'nun geometrik taban doluluk oranına
-    ve stok büyüklüğüne göre per-SKU eşik hesaplanır.
-  - Geometrik kısıtlarla %90'a ulaşamayan SKU'lar haksız yere
-    reddedilmez; gerçekçi en iyi threshold seçilir.
-
-Özellikler:
-    - Mixed-Orientation Tiling (Karma yönelim döşemesi)
-    - Efficiency-Based Evaluation (Verimlilik bazlı değerlendirme)
-    - Multi-Strategy Layer Configuration (Çok stratejili katman yapısı)
-    - Amazon-like Adaptive Single Threshold
+Aynı boyuttaki ürünleri tek palete grid düzeninde yerleştirir; sabit %90
+yerine SKU'nun geometrik taban doluluk oranına göre per-SKU adaptif eşik
+hesaplanır.
 """
 
 import math
@@ -22,9 +11,6 @@ from ..utils.helpers import urun_hacmi
 from ..models.container import PaletConfig
 
 
-# ====================================================================
-# ADAPTİVE SINGLE THRESHOLD SABİTLERİ  (Amazon-like per-SKU eşik)
-# ====================================================================
 # Formul: dynamic_threshold = clamp(
 #     BASE_SINGLE_THRESHOLD - K * (base_fill - 0.70),
 #     MIN_SINGLE_THRESHOLD, MAX_SINGLE_THRESHOLD
@@ -42,7 +28,7 @@ K_FILL_SLOPE          = 0.35   # base_fill kayması başına eşik düşüş hı
 MIN_SINGLE_THRESHOLD  = 0.70   # Mutlak alt sınır
 MAX_SINGLE_THRESHOLD  = 0.90   # Mutlak üst sınır
 
-# --- Geriye-uyumluluk sabitler (eski kod bunları önemsemiyorsa sorun yok) ---
+# Geriye-uyumluluk sabitleri (legacy yollar).
 GEOM_MARGIN    = 0.03
 STOCK_BONUS    = 0.03
 STOCK_BONUS_5PLUS = 0.02
@@ -56,9 +42,6 @@ HYSTERESIS = 0.005
 _MIN_BASE_FILL_FOR_SINGLE = 0.55
 
 
-# ====================================================================
-# ADAPTİVE THRESHOLD YARDIMCİ FONKSİYONLARI
-# ====================================================================
 
 def compute_max_base_fill(container_L: float, container_W: float,
                           item_L: float, item_W: float
@@ -390,12 +373,11 @@ def simulate_single_pallet(urun_listesi, palet_cfg: PaletConfig):
     )
     adaptive_threshold = compute_adaptive_single_threshold(max_fill, full_pallet_count)
 
-    # Eski davranışı koru: efficiency >= 0.90 her zaman kabul
-    # Histerez: verimlilik eşiğe HYSTERESIS kadar yakın ise kabul et
+    # Histerez: verimlilik adaptif eşiğe HYSTERESIS kadar yakınsa kabul et.
     hysteresis_margin = (efficiency - adaptive_threshold) * 100  # %
     is_suitable = (efficiency + HYSTERESIS >= adaptive_threshold)
 
-    # 8. Mevcut stok için pack_count
+    current_stock = len(urun_listesi)
     current_stock = len(urun_listesi)
     pack_count = min(current_stock, capacity)
 
@@ -442,9 +424,6 @@ def simulate_single_pallet(urun_listesi, palet_cfg: PaletConfig):
     }
 
 
-# ====================================================================
-# SANITY CHECK (bağımsız, pytest veya doğrudan çalıştırılabilir)
-# ====================================================================
 
 def _run_sanity_checks():
     """

@@ -1,6 +1,7 @@
 """Yükleme, ürün listesi, ana sayfa view'ları."""
 
 import json
+import logging
 import os
 import tempfile
 
@@ -9,6 +10,9 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 
 from ..services import parse_optimization_payload
+
+
+logger = logging.getLogger(__name__)
 
 
 def home_view(request):
@@ -46,8 +50,9 @@ def upload_result(request):
         urun_verileri, container_info = parse_optimization_payload(yuklenen_veri)
     except ValueError as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': f'Hata: {str(e)}'}, status=400)
+    except Exception:
+        logger.exception("Upload parse hatası")
+        return JsonResponse({'success': False, 'error': 'Dosya işlenemedi.'}, status=400)
 
     if container_info:
         request.session['container_info'] = container_info

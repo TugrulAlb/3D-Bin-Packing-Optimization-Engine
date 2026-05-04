@@ -1,9 +1,4 @@
-"""
-JSON Veri Parser
-=================
-
-Girdi dosyalarını okur ve sistem nesnelerine çevirir.
-"""
+"""JSON girdi dosyalarını okur ve sistem nesnelerine çevirir."""
 
 import json
 from ..models.container import PaletConfig

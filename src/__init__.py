@@ -1,14 +1,3 @@
-"""
-3D Bin Packing Optimization Engine
-===================================
-
-NP-Hard 3D Bin Packing problemi için Genetik Algoritma tabanlı çözüm motoru.
-
-Alt Modüller:
-    - src.core      : Algoritma mantığı (GA, Fitness, Packing Engine)
-    - src.models    : Veri modelleri (Konteyner, Ürün)
-    - src.utils     : Yardımcı araçlar (Parser, Görselleştirme, Helpers)
-"""
+"""3D bin packing optimization engine — algoritma çekirdeği."""
 
 __version__ = "2.0.0"
-__author__ = "TugrulAlb"

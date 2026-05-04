@@ -69,7 +69,6 @@ def merge_repack_service(mix_paletler, palet_cfg, optimization, baslangic_id, ur
             optimization,
             palet_id,
             'mix',
-            items_are_dicts=True,
         )
         new_django_paletler.append(p)
         palet_id += 1
@@ -111,7 +110,6 @@ def merge_repack_mix_service(mix_paletler, palet_cfg, optimization, baslangic_id
             optimization,
             palet_id,
             'mix',
-            items_are_dicts=True,
         )
         new_django_paletler.append(p)
         palet_id += 1

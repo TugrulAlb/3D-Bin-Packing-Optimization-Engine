@@ -16,9 +16,9 @@ PHASE_RANGES = {
 
 
 class Optimization(models.Model):
-    """Optimizasyon islemi; container bilgisi JSON'dan (container_*) gelir."""
+    """Optimizasyon işlemi kaydı; container bilgisi POST payload'undan gelir."""
 
-    palet_tipi = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Palet Tipi (kullanilmiyor)")
+    palet_tipi = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Palet Tipi (legacy)")
 
     container_length = models.FloatField(null=True, blank=True, verbose_name="Container Uzunluk (cm)")
     container_width = models.FloatField(null=True, blank=True, verbose_name="Container Genişlik (cm)")
@@ -61,10 +61,7 @@ class Optimization(models.Model):
         self.save()
 
     def set_phase(self, phase_name, expected_sec=None):
-        """Bar yüzdesi için şu anki aşamayı işaretler.
-        expected_sec: o aşamanın tahmini süresi (bar ease-out ile bu süre boyunca
-        aralığın sonuna asimptotik yaklaşır). None ise varsayılan kullanılır.
-        """
+        """Aktif fazı işaretler; ease-out progress bar bu süreye göre dolar."""
         if phase_name not in PHASE_RANGES:
             return
         durum = json.loads(self.islem_durumu)

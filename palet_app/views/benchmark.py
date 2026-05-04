@@ -1,6 +1,7 @@
 """Toplu test (benchmark) view'ları — 3 algoritmayı sıralı çalıştırır."""
 
 import json
+import logging
 import uuid
 from threading import Thread
 
@@ -9,8 +10,11 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 
-from ..models import Optimization, Palet, PHASE_RANGES  # noqa: F401 (PHASE_RANGES legacy re-export)
+from ..models import Optimization, Palet
 from ..workers import run_optimization, is_cancelled, normalize_progress
+
+
+logger = logging.getLogger(__name__)
 
 
 BENCHMARK_ALGORITHMS = [
@@ -69,7 +73,7 @@ def start_benchmark(request):
     request.session['benchmark_group_id'] = group_id
     request.session.modified = True
 
-    print(f"\n{'='*60}\nBENCHMARK BASLATILDI (Group: {group_id})\n{'='*60}")
+    logger.info("Benchmark başlatıldı: group=%s", group_id)
 
     container_dict = {
         'length': container_length,
@@ -83,7 +87,7 @@ def start_benchmark(request):
     def _run_benchmark_sequence():
         for opt_id, algo_key, ga_mode in created_ids:
             if is_cancelled(group_id=group_id):
-                print("[Benchmark] Grup iptal edildi, kalanlar atlaniyor.")
+                logger.info("Benchmark grubu iptal edildi: %s", group_id)
                 try:
                     remaining = Optimization.objects.filter(
                         benchmark_group_id=group_id, tamamlandi=False
@@ -97,10 +101,10 @@ def start_benchmark(request):
                             d['cancelled'] = True
                             r.islem_durumu = json.dumps(d)
                             r.save()
-                except Exception as _e:
-                    print(f"Iptal temizlik hatasi: {_e}")
+                except Exception:
+                    logger.exception("Benchmark iptal temizlik hatası (group %s)", group_id)
                 break
-            print(f"[Benchmark] BASLIYOR: {algo_key} (ID: {opt_id})")
+            logger.info("Benchmark çalışıyor: %s (id=%s)", algo_key, opt_id)
             try:
                 run_optimization(
                     urun_verileri_snapshot,
@@ -110,17 +114,14 @@ def start_benchmark(request):
                     ga_mode or 'balanced',
                     group_id,
                 )
-                print(f"[Benchmark] BITTI: {algo_key} (ID: {opt_id})")
-            except Exception as e:
-                print(f"HATA: Benchmark ({algo_key}): {e}")
+            except Exception:
+                logger.exception("Benchmark hatası: %s (id=%s)", algo_key, opt_id)
 
     try:
-        t = Thread(target=_run_benchmark_sequence)
-        t.daemon = True
+        t = Thread(target=_run_benchmark_sequence, daemon=True)
         t.start()
-        print("[Benchmark] Sirali dispatcher thread baslatildi.")
-    except Exception as e:
-        print(f"HATA: Benchmark dispatcher baslatma: {e}")
+    except Exception:
+        logger.exception("Benchmark dispatcher başlatılamadı (group %s)", group_id)
 
     return JsonResponse({
         'success': True,

@@ -57,9 +57,6 @@ W_VERTICAL_COMPACTION = 50
 _cavity_eval_counter = 0
 
 
-# ====================================================================
-# ADAPTİF AĞIRLIK SİSTEMİ (sadece geçerli çözümler için; ihlal = INFEASIBLE)
-# ====================================================================
 
 class AdaptiveWeights:
     """
@@ -76,7 +73,7 @@ class AdaptiveWeights:
         self.w_volume = 800
         self.MAX_VOLUME = 2000
 
-        # GA'da ihlal = INFEASIBLE (kullanılmıyor). DE get_weights() ile okuyor; DE'ye dokunmuyoruz, eski değerler kalsın.
+        # GA ihlali INFEASIBLE ile cezalandırır; ağırlıklar DE.get_weights() tarafından okunur.
         self.w_physical_violation = 10_000_000
         self.w_weight_violation = 1_000_000
         self.w_stacking_penalty = 120_000
@@ -144,9 +141,6 @@ def adapt_weights(best_chromosome, theo_min_pallets):
 GA_WEIGHTS = get_ga_weights()
 
 
-# ====================================================================
-# FITNESS SONUÇ YAPISI
-# ====================================================================
 
 @dataclass
 class FitnessResult:
@@ -156,9 +150,6 @@ class FitnessResult:
     ortalama_doluluk: float
 
 
-# ====================================================================
-# YARDIMCI FONKSİYONLAR
-# ====================================================================
 
 def calculate_center_of_gravity(items):
     """Paletin ağırlık merkezini hesaplar."""
@@ -265,9 +256,6 @@ def check_stacking_violations(items):
     return violations
 
 
-# ====================================================================
-# KÖŞE / OVERHANG PER-İTEM CEZA HESABI
-# ====================================================================
 
 def _calculate_corner_overhang_penalty(items):
     """
@@ -442,9 +430,6 @@ def _calculate_cavity_penalty(items, palet_l, palet_w, grid_size=CAVITY_GRID):
     return max(0.0, min(1.0, inner_void / total_cells))
 
 
-# ====================================================================
-# KOMPAKSIYON METRİK FONKSİYONLARI
-# ====================================================================
 
 def compute_void_volume(pallet_items, palet_cfg):
     """
@@ -583,9 +568,6 @@ def evaluate_fitness_lexicographic(chromosome, palet_cfg: PaletConfig) -> Fitnes
     return FitnessResult(fitness_score, P_GA, avg_doluluk)
 
 
-# ====================================================================
-# ANA FITNESS FONKSİYONU (Eski: çok terimli, adaptif ağırlıklar)
-# ====================================================================
 
 def evaluate_fitness(chromosome, palet_cfg: PaletConfig) -> FitnessResult:
     """
@@ -692,19 +674,9 @@ def evaluate_fitness(chromosome, palet_cfg: PaletConfig) -> FitnessResult:
                 W_UNDERFILL * underfill_sum,
             )
 
-    # Varyans: paletler arası doluluk tutarsızlığını cezalandır
-    # AMAZON-VARI İÇİN İPTAL EDİLDİ: Artık varyans (dengesizlik) istiyoruz!
-    # if len(pallet_utils) > 1:
-    #     mean_u = sum(pallet_utils) / len(pallet_utils)
-    #     variance = sum((u - mean_u) ** 2 for u in pallet_utils) / len(pallet_utils)
-    #     fitness_score -= W_VARIANCE * variance
-    #     if logger.isEnabledFor(logging.DEBUG):
-    #         logger.debug(
-    #             "[FITNESS] Doluluk varyansı=%.4f | variance_penalty=%.0f",
-    #             variance, W_VARIANCE * variance,
-    #         )
+    # Varyans cezası kaldırıldı: front-loaded "first pallet bigger" stratejisini koruyoruz.
 
-    # --- ŞEKİL (COG, void, edge, cavity; ihlal zaten yukarıda yasaklandı) ---
+    # COG / void / edge / cavity cezaları (sert ihlaller yukarıda yasaklandı).
     for pallet in pallets:
         # Ağırlık Merkezi (COG) cezası
         cog_penalty = calculate_cog_penalty(pallet, palet_cfg.length, palet_cfg.width)

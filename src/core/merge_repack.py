@@ -37,9 +37,6 @@ from .packing_first_fit import pack_maximal_rectangles_first_fit
 
 logger = logging.getLogger(__name__)
 
-# ====================================================================
-# SABİTLER
-# ====================================================================
 
 # Kabul eşiği: eşit palet sayısında minimum doluluk artışı
 _MIN_UTIL_GAIN   = 0.02   # 2 puan iyileşme şart
@@ -49,9 +46,6 @@ _WEIGHT_PRESSURE_THRESHOLD = 0.92
 _RESTART_TIME_LIMIT_MS = 5_000   # 5 saniye hard timeout
 
 
-# ====================================================================
-# METRİK VERİ YAPISI
-# ====================================================================
 
 @dataclass
 class MergeRepackMetrics:
@@ -124,9 +118,6 @@ class MergeRepackMetrics:
             )
 
 
-# ====================================================================
-# YARDIMCI FONKSİYONLAR
-# ====================================================================
 
 def _pallet_util(pallet: dict, palet_vol: float) -> float:
     """Palet doluluk oranı (0.0–1.0)."""
@@ -188,9 +179,6 @@ def shuffled_variant(
     return result
 
 
-# ====================================================================
-# ANA FONKSİYON
-# ====================================================================
 
 def merge_and_repack_v2(
     pallets: List[dict],
@@ -383,9 +371,6 @@ def merge_and_repack_v2(
     return pallets, metrics
 
 
-# ====================================================================
-# MERGE & REPACK MIX — İteratif BFD Konsolidasyonu
-# ====================================================================
 
 @dataclass
 class IterMergeLog:

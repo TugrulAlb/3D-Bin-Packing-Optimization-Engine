@@ -1,27 +1,8 @@
-"""
-Ürün (Kutu) Veri Modeli
-========================
-
-3D Bin Packing probleminde kutu/ürün parametrelerini tanımlar.
-"""
+"""Ürün (kutu) veri modeli."""
 
 
 class UrunData:
-    """
-    Sistem içinde dolaşacak standart Ürün Objesi.
-    
-    Attributes:
-        id: Ürün benzersiz kimliği
-        urun_kodu (str): Ürün kodu
-        boy (float): Uzunluk (cm) - X ekseni
-        en (float): Genişlik (cm) - Y ekseni
-        yukseklik (float): Yükseklik (cm) - Z ekseni
-        agirlik (float): Ağırlık (kg)
-        quantity (int): Miktar
-        is_package (bool): Paket mi, birim mi?
-        donus_serbest (bool): Yatay düzlemde döndürülebilir mi?
-        mukavemet (float): Üzerine binebilecek maksimum yük (kg)
-    """
+    """Sistem içinde dolaşan standart ürün objesi (boyutlar cm, ağırlık kg)."""
     
     def __init__(self, urun_id, code, boy, en, yukseklik, agirlik, quantity=1, is_package=False):
         self.id = urun_id

@@ -1,13 +1,7 @@
-"""
-Palet Görselleştirme Modülü (Django-Bağımsız)
-===============================================
-
-Matplotlib ile 3D palet görselleştirme.
-Bu modül herhangi bir web framework'e bağımlı değildir.
-"""
+"""Matplotlib ile 3D palet görselleştirme; Django'dan bağımsızdır."""
 
 import matplotlib
-matplotlib.use('Agg')  # GUI olmadan çalışması için
+matplotlib.use('Agg')  # Headless backend
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np

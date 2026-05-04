@@ -5,7 +5,11 @@ ile fazlar arası iptal sinyalini okur.
 """
 
 import json
+import logging
 import time
+import traceback
+
+from django.utils import timezone
 
 from ..models import Urun, Optimization, Palet
 from ..services import (
@@ -21,6 +25,9 @@ from src.core.packing_first_fit import pack_maximal_rectangles_first_fit
 
 from .cancel_registry import OptimizationCancelled, check_cancel
 from .progress import estimate_mix_sec
+
+
+logger = logging.getLogger(__name__)
 
 
 def run_greedy_mix(urun_data_listesi, palet_cfg, start_id):
@@ -52,24 +59,20 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
     try:
         check_cancel(optimization_id, group_id)
         optimization = Optimization.objects.get(id=optimization_id)
-        # Tek doğru kaynak: başlatma anında kaydedilen algoritma (DB)
         algoritma = (optimization.algoritma or 'greedy').strip().lower()
         if algoritma not in ('genetic', 'differential_evolution', 'greedy'):
             algoritma = 'greedy'
-        _thread_t0 = time.time()
-        # Her algoritma kendi süresini t=0'dan başlasın (sıralı çalıştırmada
-        # önceki algoritmaların beklemesi bu süreye yansımasın).
-        from django.utils import timezone as _tz
-        optimization.baslangic_zamani = _tz.now()
+
+        # Algoritmaların kendi süresini t=0'dan ölçebilmesi için sıralı
+        # benchmark çalıştırmasında baslangic_zamani'nı thread'in girişinde sıfırla.
+        optimization.baslangic_zamani = timezone.now()
         optimization.save(update_fields=['baslangic_zamani'])
-        print(f"\nrun_optimization() basladi (ID: {optimization_id}, Algoritma DB'den: {algoritma}, t0={_thread_t0:.3f})")
-        print(f"Optimization objesi bulundu (ID: {optimization_id})")
+        logger.info("run_optimization başladı: id=%s algo=%s", optimization_id, algoritma)
 
         check_cancel(optimization_id, group_id)
         optimization.set_phase('baslangic')
         optimization.islem_adimi_ekle(f"[MOTOR] Algoritma: {algoritma.upper()}")
 
-        # Adım 1: Ürünleri veritabanına kaydet
         check_cancel(optimization_id, group_id)
         optimization.set_phase('urunler')
         optimization.islem_adimi_ekle("Ürün verileri yükleniyor...")
@@ -90,7 +93,6 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
             urun.save()
             urunler.append(urun)
 
-        # Adım 2: Single palet yerleştirme
         check_cancel(optimization_id, group_id)
         optimization.set_phase('single', expected_sec=max(3.0, len(urunler) * 0.04))
         optimization.islem_adimi_ekle("Single paletler oluşturuluyor...")
@@ -119,7 +121,6 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
             urun_data.mukavemet = urun.mukavemet
             urun_data_listesi.append(urun_data)
 
-        # Adım 3: Mix palet yerleştirme
         check_cancel(optimization_id, group_id)
         mix_motor_start = time.time()
         optimization.set_phase('mix', expected_sec=estimate_mix_sec(algoritma, len(urun_data_listesi)))
@@ -237,7 +238,6 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
             f"{len(mix_paletler)} mix palet üretildi"
         )
 
-        # Merge & Repack post-optimizasyon
         merge_start = time.time()
         if len(mix_paletler) >= 2:
             check_cancel(optimization_id, group_id)
@@ -277,7 +277,6 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
             f"son {len(mix_paletler)} mix palet"
         )
 
-        # Adım 4: İstatistikleri güncelle
         optimization.islem_adimi_ekle("İstatistikler hesaplanıyor...")
 
         tum_paletler = list(single_paletler) + list(mix_paletler)
@@ -312,7 +311,6 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
 
         optimization.yerlesmemis_urunler = son_yerlesmeyen_urunler
 
-        # Tüm paletler için görselleri oluştur
         check_cancel(optimization_id, group_id)
         optimization.set_phase('gorsel', expected_sec=max(2.0, len(tum_paletler) * 0.25))
         optimization.islem_adimi_ekle("Palet görselleri oluşturuluyor...")
@@ -321,30 +319,26 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
             if not palet.gorsel:
                 try:
                     urun_konumlari = palet.json_to_dict(palet.urun_konumlari)
-                    urun_ids = [int(id) for id in urun_konumlari.keys()]
+                    urun_ids = [int(uid) for uid in urun_konumlari.keys()]
                     palet_urunleri = list(Urun.objects.filter(id__in=urun_ids))
 
                     png_content = palet_gorsellestir(palet, palet_urunleri, save_to_file=True)
                     palet.gorsel.save(f'palet_{palet.palet_id}.png', png_content, save=True)
-                    print(f"Palet {palet.palet_id} gorseli olusturuldu")
                 except Exception as e:
-                    print(f"UYARI: Palet {palet.palet_id} gorseli olusturulamadi: {str(e)}")
+                    logger.warning("Palet %s görseli oluşturulamadı: %s", palet.palet_id, e)
 
         optimization.islem_adimi_ekle("Optimizasyon tamamlandı.")
         optimization.tamamla()
 
-        print(f"\n{'='*60}")
-        print(f"OPTIMIZASYON TAMAMLANDI")
-        print(f"{'='*60}")
-        print(f"Optimization ID: {optimization_id}")
-        print(f"Toplam Palet: {optimization.toplam_palet}")
-        print(f"Single Palet: {optimization.single_palet}")
-        print(f"Mix Palet: {optimization.mix_palet}")
-        print(f"Yerleşemeyen: {len(son_yerlesmeyen_urunler)}")
-        print(f"{'='*60}\n")
+        logger.info(
+            "Optimizasyon tamamlandı: id=%s algo=%s toplam=%d single=%d mix=%d yerlesmeyen=%d",
+            optimization_id, algoritma,
+            optimization.toplam_palet, optimization.single_palet, optimization.mix_palet,
+            len(son_yerlesmeyen_urunler),
+        )
 
     except OptimizationCancelled:
-        print(f"[IPTAL] Optimization {optimization_id} ({algoritma}) kullanıcı tarafından iptal edildi.")
+        logger.info("Optimization %s (%s) iptal edildi", optimization_id, algoritma)
         try:
             optimization = Optimization.objects.get(id=optimization_id)
             optimization.islem_adimi_ekle("İşlem kullanıcı tarafından iptal edildi.")
@@ -353,21 +347,12 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
             durum['cancelled'] = True
             optimization.islem_durumu = json.dumps(durum)
             optimization.save()
-        except Exception as inner_e:
-            print(f"Cancel temizlik hatasi: {inner_e}")
+        except Exception:
+            logger.exception("Cancel temizlik hatası (opt %s)", optimization_id)
         return
 
     except Exception as e:
-        import traceback
-        error_detail = traceback.format_exc()
-        print(f"\n{'='*60}")
-        print(f"HATA: OPTIMIZASYON HATASI")
-        print(f"{'='*60}")
-        print(f"Optimization ID: {optimization_id}")
-        print(f"HATA: {str(e)}")
-        print(f"DETAY:\n{error_detail}")
-        print(f"{'='*60}\n")
-
+        logger.exception("Optimizasyon hatası: id=%s algo=%s", optimization_id, algoritma)
         try:
             optimization = Optimization.objects.get(id=optimization_id)
             optimization.islem_adimi_ekle(f"Hata: {str(e)}")
@@ -375,5 +360,5 @@ def run_optimization(urun_verileri, container_info, optimization_id, algoritma='
             durum['current_step'] = -1
             optimization.islem_durumu = json.dumps(durum)
             optimization.save()
-        except Exception as inner_e:
-            print(f"Inner exception: {str(inner_e)}")
+        except Exception:
+            logger.exception("Inner exception (opt %s)", optimization_id)
